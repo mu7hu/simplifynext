@@ -1,0 +1,107 @@
+"""LangGraph StateGraph builder for Traction supervisor."""
+
+from functools import partial
+from langgraph.graph import StateGraph, START, END
+from langgraph.checkpoint.memory import MemorySaver
+
+from traction.graph.state import TractionGraphState
+from traction.graph.nodes import (
+    node_load_context,
+    node_strategist,
+    node_validate_plan,
+    node_strategist_repair,
+    node_approval_gate,
+    node_founder_revision,
+    node_execute,
+    node_measure,
+    node_analyst,
+    node_validate_analysis,
+    node_persist_ledger,
+    node_generate_digest,
+)
+from traction.graph.routing import (
+    route_after_validation,
+    route_after_approval,
+    route_after_digest,
+)
+
+
+def compile_traction_graph(
+    ledger,
+    profiler,
+    intake,
+    strategist_agent,
+    analyst_agent,
+    approval_gate,
+    execution_service,
+    measurement_service,
+    digest_service,
+    checkpointer=None
+):
+    """Construct and compile the LangGraph StateGraph workflow for Traction."""
+    workflow = StateGraph(TractionGraphState)
+
+    # Register nodes with dependency injection
+    workflow.add_node("load_context", partial(node_load_context, ledger=ledger, profiler=profiler, intake=intake))
+    workflow.add_node("strategist", partial(node_strategist, strategist_agent=strategist_agent, ledger=ledger))
+    workflow.add_node("validate_plan", node_validate_plan)
+    workflow.add_node("strategist_repair", partial(node_strategist_repair, strategist_agent=strategist_agent))
+    workflow.add_node("approval_gate", partial(node_approval_gate, approval_gate=approval_gate))
+    workflow.add_node("founder_revision", node_founder_revision)
+    workflow.add_node("execute", partial(node_execute, execution_service=execution_service))
+    workflow.add_node("measure", partial(node_measure, measurement_service=measurement_service))
+    workflow.add_node("analyst", partial(node_analyst, analyst_agent=analyst_agent))
+    workflow.add_node("validate_analysis", node_validate_analysis)
+    workflow.add_node("persist_ledger", partial(node_persist_ledger, ledger=ledger))
+    workflow.add_node("generate_digest", partial(node_generate_digest, digest_service=digest_service))
+
+    # Edges
+    workflow.add_edge(START, "load_context")
+    workflow.add_edge("load_context", "strategist")
+    workflow.add_edge("strategist", "validate_plan")
+
+    workflow.add_conditional_edges(
+        "validate_plan",
+        route_after_validation,
+        {
+            "approval_gate": "approval_gate",
+            "strategist_repair": "strategist_repair",
+            END: END
+        }
+    )
+
+    workflow.add_edge("strategist_repair", "validate_plan")
+
+    workflow.add_conditional_edges(
+        "approval_gate",
+        route_after_approval,
+        {
+            "execute": "execute",
+            "founder_revision": "founder_revision"
+        }
+    )
+
+    workflow.add_edge("founder_revision", "strategist")
+
+    workflow.add_edge("execute", "measure")
+    workflow.add_edge("measure", "analyst")
+    workflow.add_edge("analyst", "validate_analysis")
+    workflow.add_edge("validate_analysis", "persist_ledger")
+    workflow.add_edge("persist_ledger", "generate_digest")
+
+    workflow.add_conditional_edges(
+        "generate_digest",
+        route_after_digest,
+        {
+            "load_context": "load_context",
+            END: END
+        }
+    )
+
+    # A checkpointer is useful for resumable/streaming deployments, but a
+    # plain graph invocation should also work for local scripts and tests.
+    # LangGraph requires a configurable thread_id whenever a checkpointer is
+    # attached, and state-level thread_id is not sufficient for that API.
+    if checkpointer is None:
+        return workflow.compile()
+    return workflow.compile(checkpointer=checkpointer)

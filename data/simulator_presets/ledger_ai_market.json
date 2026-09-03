@@ -1,0 +1,52 @@
+{
+  "GOOGLE_SEARCH": {
+    "base_unit_cost": 12.0,
+    "base_conversion_rate": 0.045,
+    "saturation_spend": 2500.0,
+    "diminishing_returns_gamma": 0.85,
+    "noise_std": 0.12,
+    "response_delay_days": 3,
+    "min_evaluation_days": 14,
+    "audience_fit_score": 1.3
+  },
+  "COLD_EMAIL": {
+    "base_unit_cost": 2.0,
+    "base_conversion_rate": 0.018,
+    "saturation_spend": 400.0,
+    "diminishing_returns_gamma": 0.55,
+    "noise_std": 0.15,
+    "response_delay_days": 5,
+    "min_evaluation_days": 14,
+    "audience_fit_score": 1.0
+  },
+  "META": {
+    "base_unit_cost": 3.5,
+    "base_conversion_rate": 0.004,
+    "saturation_spend": 1200.0,
+    "diminishing_returns_gamma": 0.6,
+    "noise_std": 0.25,
+    "response_delay_days": 7,
+    "min_evaluation_days": 14,
+    "audience_fit_score": 0.6
+  },
+  "LINKEDIN": {
+    "base_unit_cost": 18.0,
+    "base_conversion_rate": 0.016,
+    "saturation_spend": 2000.0,
+    "diminishing_returns_gamma": 0.8,
+    "noise_std": 0.3,
+    "response_delay_days": 30,
+    "min_evaluation_days": 35,
+    "audience_fit_score": 0.9
+  },
+  "FOUNDER_CONTENT": {
+    "base_unit_cost": 8.0,
+    "base_conversion_rate": 0.0015,
+    "saturation_spend": 800.0,
+    "diminishing_returns_gamma": 0.5,
+    "noise_std": 0.35,
+    "response_delay_days": 21,
+    "min_evaluation_days": 28,
+    "audience_fit_score": 0.5
+  }
+}
