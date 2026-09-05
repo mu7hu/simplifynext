@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Traction — The Next Dollar</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar">
+      <div class="sidebar-brand">
+        <div class="brand-logo">▲</div>
+        <div class="brand-text">
+          <div class="brand-name">Traction</div>
+          <div class="brand-sub">LedgerAI · Cycle 4</div>
+        </div>
+      </div>
+
+      <nav class="sidebar-nav">
+        <a href="#brief" class="nav-item" data-view="brief">
+          <span class="nav-icon">✎</span><span class="nav-label">Founder Brief</span>
+        </a>
+        <a href="#dashboard" class="nav-item" data-view="dashboard">
+          <span class="nav-icon">○</span><span class="nav-label">Dashboard</span>
+        </a>
+        <a href="#approval" class="nav-item" data-view="approval">
+          <span class="nav-icon">◎</span><span class="nav-label">Approval</span>
+          <span class="nav-badge">1</span>
+        </a>
+        <a href="#analytics" class="nav-item" data-view="analytics">
+          <span class="nav-icon">◈</span><span class="nav-label">Analytics</span>
+        </a>
+        <a href="#activity" class="nav-item" data-view="activity">
+          <span class="nav-icon">⧖</span><span class="nav-label">Agent Activity</span>
+        </a>
+      </nav>
+
+      <div class="sidebar-footer">
+        <div class="footer-loop">Loop iteration 4 / 12</div>
+        <div class="footer-cycle">Budget cycle: Month 4</div>
+      </div>
+    </aside>
+
+    <main class="main" id="main"></main>
+  </div>
+
+  <button class="help-fab" title="Help">?</button>
+  <div class="toast" id="toast"></div>
+
+  <script src="app.js"></script>
+</body>
+</html>
