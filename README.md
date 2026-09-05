@@ -30,7 +30,7 @@ python3 -m http.server 8765
 Navigation is hash-based (`#brief`, `#dashboard`, `#approval`, `#analytics`, `#activity`).
 
 ### 1. Founder Brief (`#brief`)
-Onboarding form that guides every agent decision: product & buyer, monthly budget, goal & target cost per signup, **hard exclusions** (🔒 channels the agent may never propose) and **soft preferences** (★ channels protected for 2 cycles). Chips can be added and removed.
+Onboarding form that guides every agent decision: product & buyer, monthly budget, goal & target cost per signup, **hard exclusions** (lock icon — channels the agent may never propose) and **soft preferences** (star icon — channels protected for 2 cycles). Chips can be added and removed.
 
 ### 2. Dashboard (`#dashboard`)
 Cycle status stepper (Brief → Plan → Approve → Launch & Measure → Reflect), budget overview with allocation bar and explore/exploit split, latest verdicts per channel, and an orange banner when a plan is awaiting approval.
@@ -53,3 +53,6 @@ Read-only event stream for the planning run: timestamped timeline with node chip
 - Colour accents are semantic: **teal** (`#0097A7`) for agent/positive states, **orange** (`#E8875B`) reserved exclusively for human-in-the-loop moments (approval buttons, awaiting-approval states).
 - Cards on an off-white canvas, 12px radius, tabular figures for money.
 - Font: Inter (Google Fonts) with Arial fallback.
+- Icons are inline SVG (Lucide-style strokes) rather than emoji or Unicode glyphs; decorative icons are `aria-hidden`.
+- Interactive elements have hover/focus-visible states and 140–320ms transitions; `prefers-reduced-motion` disables animation.
+- Below 900px the sidebar collapses to a 72px icon rail; wide tables scroll horizontally inside their card.
