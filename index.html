@@ -29,7 +29,7 @@
         </a>
         <a href="#approval" class="nav-item" data-view="approval">
           <span class="nav-icon">◎</span><span class="nav-label">Approval</span>
-          <span class="nav-badge">1</span>
+          <span class="nav-badge" id="navBadge">1</span>
         </a>
         <a href="#analytics" class="nav-item" data-view="analytics">
           <span class="nav-icon">◈</span><span class="nav-label">Analytics</span>
@@ -48,7 +48,25 @@
     <main class="main" id="main"></main>
   </div>
 
-  <button class="help-fab" title="Help">?</button>
+  <button class="help-fab" title="Help" aria-controls="helpPanel" aria-expanded="false">?</button>
+  <aside class="help-panel" id="helpPanel" hidden>
+    <div class="help-head">
+      <div class="help-title">How Traction works</div>
+      <button class="help-close" data-close-help aria-label="Close help">✕</button>
+    </div>
+    <ol class="help-steps">
+      <li><strong>Brief</strong> — you describe the product, budget, goal and any channels that are off-limits.</li>
+      <li><strong>Plan</strong> — each cycle the agent proposes how to split the budget across channels.</li>
+      <li><strong>Approve</strong> — nothing runs until you approve. You can edit line items first.</li>
+      <li><strong>Launch &amp; Measure</strong> — channels run for their evaluation window.</li>
+      <li><strong>Reflect</strong> — each channel gets a verdict: SCALE, HOLD, CUT or INSUFFICIENT DATA.</li>
+    </ol>
+    <div class="help-legend">
+      <span class="help-swatch help-swatch-teal"></span> Teal = agent activity &amp; positive results
+      <br />
+      <span class="help-swatch help-swatch-orange"></span> Orange = something needs <em>your</em> decision
+    </div>
+  </aside>
   <div class="toast" id="toast"></div>
 
   <script src="app.js"></script>

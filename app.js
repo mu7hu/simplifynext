@@ -10,6 +10,7 @@ const state = {
   expandedRows: {},          // channel -> bool
   spends: { 'Google Search': 1200, 'Founder Content': 500, 'LinkedIn Ads': 300 },
   validationError: null,
+  planStatus: 'pending',     // 'pending' | 'approved' | 'rejected'
   exclusions: ['TikTok', 'Influencer Marketing'],
   preferences: ['LinkedIn Ads', 'Founder Content'],
 };
@@ -98,11 +99,29 @@ const VERDICT_HISTORY = [
 const CHART_SERIES = [
   { name: 'Google Search',   color: '#0097A7', values: [128, 78, 61] },
   { name: 'Founder Content', color: '#68DAF8', values: [200, 120, 100] },
-  { name: 'LinkedIn Ads',    color: '#9FCBFD', values: [500, 0, 100] },
+  { name: 'LinkedIn Ads',    color: '#9FCBFD', values: [500, null, 100] }, // null = no signups, CAC undefined
 ];
 
 // ---------- Helpers ----------
 const fmt = (n) => 'S$' + n.toLocaleString('en-US');
+
+// "+S$300 (+33%)" / "−S$200 (−40%)"
+function fmtDelta(proposed, current) {
+  const delta = proposed - current;
+  const pct = Math.round((delta / current) * 100);
+  const sign = delta >= 0 ? '+' : '−';
+  return `${sign}${fmt(Math.abs(delta))} (${sign}${Math.abs(pct)}%)`;
+}
+
+// Escape user-supplied text before interpolating into innerHTML
+function esc(s) {
+  return String(s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
 
 function badge(verdict) {
   const cls = {
@@ -130,8 +149,8 @@ function proposedTotal() {
 function renderBrief() {
   const chip = (name, kind) => `
     <span class="chip ${kind === 'excluded' ? 'chip-excluded' : 'chip-preferred'}">
-      <span>${kind === 'excluded' ? '🔒' : '★'}</span> ${name}
-      <button class="chip-x" data-remove-chip="${kind}" data-name="${name}" aria-label="Remove ${name}">✕</button>
+      <span>${kind === 'excluded' ? '🔒' : '★'}</span> ${esc(name)}
+      <button class="chip-x" data-remove-chip="${kind}" data-name="${esc(name)}" aria-label="Remove ${esc(name)}">✕</button>
     </span>`;
 
   return `
@@ -242,8 +261,8 @@ function renderDashboard() {
 
   const verdicts = [
     { channel: 'Google Search', verdict: 'SCALE', confidence: '87%', observed: 'S$45', obsTone: 'teal', target: 'S$120' },
-    { channel: 'Founder Content', verdict: 'HOLD', confidence: '54%', observed: 'S$98', obsTone: 'teal', target: 'S$120' },
-    { channel: 'LinkedIn Ads', verdict: 'INSUFFICIENT DATA', confidence: '31%', observed: 'S$210', obsTone: 'orange', target: 'S$120' },
+    { channel: 'Founder Content', verdict: 'HOLD', confidence: '54%', observed: 'S$100', obsTone: 'teal', target: 'S$120' },
+    { channel: 'LinkedIn Ads', verdict: 'INSUFFICIENT DATA', confidence: '31%', observed: 'S$250', obsTone: 'orange', target: 'S$120' },
   ];
 
   return `
@@ -313,6 +332,7 @@ function renderDashboard() {
       </section>
     </div>
 
+    ${state.planStatus === 'pending' ? `
     <section class="approval-banner">
       <div class="banner-icon">◉</div>
       <div>
@@ -320,7 +340,7 @@ function renderDashboard() {
         <div class="banner-sub">The agent has proposed a new allocation. Review before anything runs.</div>
       </div>
       <button class="btn btn-human" data-goto="approval">Review Plan →</button>
-    </section>
+    </section>` : ''}
   </div>`;
 }
 
@@ -331,10 +351,8 @@ function renderApproval() {
   const planRows = PLAN_ROWS.map((row) => {
     const current = CURRENT_SPEND[row.channel];
     const proposed = Number(state.spends[row.channel]) || 0;
-    const delta = proposed - current;
-    const pct = Math.round((delta / current) * 100);
-    const changeCls = delta >= 0 ? 'change-up' : 'change-down';
-    const changeText = `${delta >= 0 ? '+' : ''}S$${delta >= 0 ? delta : '-' + Math.abs(delta)} (${delta >= 0 ? '+' : '-'}${Math.abs(pct)}%)`;
+    const changeCls = proposed >= current ? 'change-up' : 'change-down';
+    const changeText = fmtDelta(proposed, current);
     const expanded = !!state.expandedRows[row.channel];
 
     const spendCell = state.editMode
@@ -446,11 +464,17 @@ function renderApproval() {
       <button class="btn btn-primary" data-action="save-drafts">Save drafts</button>
     </div>`;
 
+  const statusBadge = {
+    pending: '<span class="badge badge-awaiting">Awaiting Your Approval</span>',
+    approved: '<span class="badge badge-approved">Approved</span>',
+    rejected: '<span class="badge badge-rejected">Rejected</span>',
+  }[state.planStatus];
+
   return `
   <div class="content-wrap">
     <header class="approval-header">
       <h1 class="page-title">Cycle 5 plan</h1>
-      <span class="badge badge-awaiting">Awaiting Your Approval</span>
+      ${statusBadge}
       <p class="approval-meta">Proposed by the agent · Generated 09:07 today</p>
     </header>
 
@@ -483,11 +507,15 @@ function renderChart() {
     <text x="${W - 16}" y="${y(120) + 5}" font-size="14" fill="#5F6E7E">S$120</text>`;
 
   const series = CHART_SERIES.map((s) => {
-    const pts = s.values.map((v, i) => [x(i), y(v)]);
-    const path = pts.map((p, i) => `${i === 0 ? 'M' : 'L'}${p[0]},${p[1]}`).join(' ');
-    const dots = pts.map(([px, py], i) => `
-      <circle cx="${px}" cy="${py}" r="8" fill="#FFFFFF" stroke="${s.color}" stroke-width="3.5"/>
-      <text x="${px}" y="${py - 16}" text-anchor="middle" font-size="15" font-weight="600" fill="${s.color}">S$${s.values[i]}</text>`).join('');
+    // A null value (no signups → CAC undefined) breaks the line and gets no dot
+    const path = s.values.map((v, i) => {
+      if (v == null) return '';
+      const prevMissing = i === 0 || s.values[i - 1] == null;
+      return `${prevMissing ? 'M' : 'L'}${x(i)},${y(v)}`;
+    }).join(' ');
+    const dots = s.values.map((v, i) => v == null ? '' : `
+      <circle cx="${x(i)}" cy="${y(v)}" r="8" fill="#FFFFFF" stroke="${s.color}" stroke-width="3.5"/>
+      <text x="${x(i)}" y="${y(v) - 16}" text-anchor="middle" font-size="15" font-weight="600" fill="${s.color}">S$${v}</text>`).join('');
     return `<path d="${path}" fill="none" stroke="${s.color}" stroke-width="3"/>${dots}`;
   }).join('');
 
@@ -548,7 +576,7 @@ function renderAnalytics() {
 
     <section class="card section-gap">
       <h2 class="card-title">Cost per signup over time</h2>
-      <p class="chart-sub">Completed cycles only · Dashed line = S$120 target</p>
+      <p class="chart-sub">Completed cycles only · Dashed line = S$120 target · Gaps = no signups recorded</p>
       <div class="chart-wrap">${renderChart()}</div>
       <div class="chart-legend">
         ${CHART_SERIES.map((s) => `<span class="key"><span class="line" style="background:${s.color}"></span>${s.name}</span>`).join('')}
@@ -576,7 +604,7 @@ function renderAnalytics() {
 
         <section class="card digest-card">
           <h2 class="digest-title">Founder digest — Cycle 4</h2>
-          <div class="digest-week">**Week ending Oct 4, 2025**</div>
+          <div class="digest-week"><strong>Week ending Oct 4, 2025</strong></div>
           <p>Google Search is your engine right now. At S$45 CAC, it's beating the target by 2.6×. We're scaling it up.</p>
           <p>Founder Content continues to improve but slowly. CAC dropped from S$200 (Cycle 1) to S$100 this cycle. It's earning its keep — just not leading yet.</p>
           <p>LinkedIn Ads is inconclusive. We've reduced the budget to the minimum needed to complete the evaluation window. One more cycle will tell us whether to cut it.</p>
@@ -683,7 +711,20 @@ function render() {
   document.querySelectorAll('.nav-item').forEach((el) => {
     el.classList.toggle('active', el.dataset.view === state.view);
   });
+  // Sidebar badge = number of plans waiting on the founder
+  const pending = state.planStatus === 'pending' ? 1 : 0;
+  const navBadge = document.getElementById('navBadge');
+  navBadge.textContent = pending;
+  navBadge.hidden = pending === 0;
   window.scrollTo(0, 0);
+}
+
+function toggleHelp(open) {
+  const panel = document.getElementById('helpPanel');
+  const fab = document.querySelector('.help-fab');
+  const show = open == null ? panel.hidden : open;
+  panel.hidden = !show;
+  fab.setAttribute('aria-expanded', String(show));
 }
 
 function navigate(view) {
@@ -697,6 +738,10 @@ window.addEventListener('hashchange', () => navigate(location.hash.slice(1)));
 
 // ---------- Event delegation ----------
 document.addEventListener('click', (e) => {
+  if (e.target.closest('.help-fab')) { toggleHelp(); return; }
+  if (e.target.closest('[data-close-help]')) { toggleHelp(false); return; }
+  if (!e.target.closest('#helpPanel')) toggleHelp(false);
+
   const navItem = e.target.closest('.nav-item');
   if (navItem) {
     e.preventDefault();
@@ -766,11 +811,17 @@ document.addEventListener('click', (e) => {
       break;
     }
     case 'reject':
+      state.planStatus = 'rejected';
+      state.editMode = false;
       showToast('Plan rejected. The agent will draft a revised proposal.');
+      render();
       break;
     case 'approve':
       if (action.disabled) return;
+      state.planStatus = 'approved';
+      state.editMode = false;
       showToast('Cycle 5 plan approved. Launching channels…');
+      render();
       break;
     case 'save-drafts':
       state.approvalTab = 'plan';
@@ -800,13 +851,15 @@ document.addEventListener('input', (e) => {
   const row = spendInput.closest('tr');
   const changeCell = row && row.querySelector('.cell-change');
   if (changeCell) {
-    const channel = spendInput.dataset.spendInput;
-    const current = CURRENT_SPEND[channel];
-    const delta = (Number(spendInput.value) || 0) - current;
-    const pct = Math.round((delta / current) * 100);
-    changeCell.className = 'cell-change ' + (delta >= 0 ? 'change-up' : 'change-down');
-    changeCell.textContent = `${delta >= 0 ? '+' : ''}S$${delta >= 0 ? delta : '-' + Math.abs(delta)} (${delta >= 0 ? '+' : '-'}${Math.abs(pct)}%)`;
+    const current = CURRENT_SPEND[spendInput.dataset.spendInput];
+    const proposed = Number(spendInput.value) || 0;
+    changeCell.className = 'cell-change ' + (proposed >= current ? 'change-up' : 'change-down');
+    changeCell.textContent = fmtDelta(proposed, current);
   }
+});
+
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') toggleHelp(false);
 });
 
 // ---------- Boot ----------
