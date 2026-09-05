@@ -11,6 +11,9 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 # ---------------------------------------------------------------------------
 BEDROCK_HAIKU_MODEL_ID: str = "global.anthropic.claude-haiku-4-5-20251001-v1:0"
 BEDROCK_SONNET_MODEL_ID: str = "anthropic.claude-3-5-sonnet-20241022-v2:0"
+# Cheap serverless reasoning options for the Analyst (Amazon Nova family).
+BEDROCK_NOVA_MICRO_MODEL_ID: str = "amazon.nova-micro-v1:0"
+BEDROCK_NOVA_LITE_MODEL_ID: str = "amazon.nova-lite-v1:0"
 DEFAULT_BEDROCK_REGION: str = "ap-southeast-1"
 
 
@@ -29,7 +32,22 @@ class Settings(BaseSettings):
     # Bedrock Model Names
     bedrock_default_model: str = Field(default=BEDROCK_HAIKU_MODEL_ID, alias="BEDROCK_DEFAULT_MODEL")
     bedrock_strategist_model: str = Field(default=BEDROCK_SONNET_MODEL_ID, alias="BEDROCK_STRATEGIST_MODEL")
-    bedrock_analyst_model: str = Field(default=BEDROCK_SONNET_MODEL_ID, alias="BEDROCK_ANALYST_MODEL")
+    # The Analyst defaults to a cheap model (Claude Haiku on Bedrock). Set
+    # BEDROCK_ANALYST_MODEL to a Nova id (see BEDROCK_NOVA_*_MODEL_ID) for an even
+    # cheaper option, or flip ANALYST_USE_ESCALATION=true to route through
+    # BEDROCK_ANALYST_ESCALATION_MODEL when reasoning quality genuinely requires it.
+    bedrock_analyst_model: str = Field(default=BEDROCK_HAIKU_MODEL_ID, alias="BEDROCK_ANALYST_MODEL")
+    bedrock_analyst_escalation_model: str = Field(
+        default=BEDROCK_SONNET_MODEL_ID, alias="BEDROCK_ANALYST_ESCALATION_MODEL"
+    )
+    analyst_use_escalation: bool = Field(default=False, alias="ANALYST_USE_ESCALATION")
+    # Content Generator Agent: cheap model by default; escalate behind a flag.
+    bedrock_content_model: str = Field(default=BEDROCK_HAIKU_MODEL_ID, alias="BEDROCK_CONTENT_MODEL")
+    bedrock_content_escalation_model: str = Field(
+        default=BEDROCK_SONNET_MODEL_ID, alias="BEDROCK_CONTENT_ESCALATION_MODEL"
+    )
+    content_use_escalation: bool = Field(default=False, alias="CONTENT_USE_ESCALATION")
+    content_variants_per_channel: int = Field(default=3, ge=1, le=10, alias="CONTENT_VARIANTS_PER_CHANNEL")
 
     # Mode: Local Stub / Offline Development
     use_stub_models: bool = Field(default=True, alias="USE_STUB_MODELS")
