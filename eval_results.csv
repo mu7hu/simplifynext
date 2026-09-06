@@ -1,0 +1,6 @@
+strategy_name,total_spend,total_outcomes,blended_cac,cumulative_outcomes_per_dollar,regret_vs_oracle,cycles_to_identify_best,final_allocation_distance,unjustified_early_cut_rate,schema_validation_pass_rate,tool_call_success_rate,task_completion_rate,token_cost_per_run,loop_discipline_rate,answer_fidelity_score
+Oracle,60000.0,352,170.45,0.00587,0,1,0.0,0.0,1.0,1.0,1.0,0.0,1.0,0.95
+Equal Split,60000.0,203,295.57,0.00338,149,1,0.9,0.0,1.0,1.0,1.0,0.0,1.0,0.95
+Founder Split,60000.0,174,344.83,0.0029,178,6,1.0,0.0,1.0,1.0,1.0,0.0,1.0,0.95
+Greedy Winner,60000.0,207,289.86,0.00345,145,1,1.1,0.0,1.0,1.0,1.0,0.0,1.0,0.95
+Traction (Agentic),60000.0,320,187.5,0.00533,32,4,0.15,0.0,1.0,1.0,1.0,0.08,1.0,0.98
