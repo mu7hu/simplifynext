@@ -211,6 +211,18 @@ reference-data upload, is available through:
 .\scripts\deploy_serverless.ps1
 ```
 
+Host the static frontend privately behind HTTPS CloudFront with:
+
+```powershell
+python scripts/deploy_frontend.py --profile simplifynext --region us-east-1
+```
+
+This creates the `simplifynext-frontend` stack, uploads `index.html`,
+`app.js`, and `styles.css` to a private S3 bucket, and invalidates CloudFront.
+The current UI is a static prototype; connecting its actions to the protected
+API requires the frontend to implement Cognito sign-in and send the JWT bearer
+token described above.
+
 Create the first Cognito user from the AWS console or with the Cognito admin
 CLI after deployment. Keep `UseStubModels=true` while testing; change it to
 `false` only when Bedrock access and model spending have been explicitly
