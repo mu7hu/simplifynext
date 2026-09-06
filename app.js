@@ -2228,6 +2228,10 @@ function initTheme() {
 // ---------- Boot ----------
 async function boot() {
   initTheme();
+  if (new URLSearchParams(location.search).has('logout')) {
+    clearAuth();
+    history.replaceState(null, '', location.pathname);
+  }
   setAuthMode('signin');
   const form = document.getElementById('authForm');
   form.addEventListener('submit', async (e) => {

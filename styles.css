@@ -117,6 +117,7 @@ button { font-family: inherit; }
 .skip-link:focus { top: 12px; }
 
 .app { display: flex; min-height: 100vh; }
+.auth-gate[hidden], .app[hidden] { display: none !important; }
 
 /* Cognito sign-in gate */
 .auth-gate { min-height: 100vh; display: grid; place-items: center; padding: 24px; background: var(--bg); }
@@ -135,6 +136,8 @@ button { font-family: inherit; }
 .auth-switch { margin-top: 20px; color: var(--text-muted); font-size: 13px; }
 .auth-switch button { border: 0; padding: 0; color: var(--accent); background: transparent; cursor: pointer; font: inherit; font-weight: 700; }
 .auth-switch button:hover { text-decoration: underline; }
+.auth-signout { width: 100%; margin-bottom: 12px; padding: 8px 10px; border: 1px solid var(--border); border-radius: 8px; color: var(--text-muted); background: transparent; cursor: pointer; font: inherit; font-size: 12px; }
+.auth-signout:hover { color: var(--text-primary); background: var(--surface-2); }
 
 /* ============================================================
    Sidebar
