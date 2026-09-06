@@ -201,6 +201,21 @@ DynamoDB table, and a private S3 data bucket. Upload the JSON files under
 the bucket after deployment. Never upload `.env`, credentials, SQLite files,
 or the local virtual environment.
 
+The API is protected by a Cognito JWT authorizer and has API Gateway throttling
+enabled. The stack outputs `CognitoUserPoolId` and `CognitoClientId`; the
+frontend must authenticate a user in that pool and send the resulting bearer
+token in the `Authorization` header. A repeatable deployment, including the
+reference-data upload, is available through:
+
+```powershell
+.\scripts\deploy_serverless.ps1
+```
+
+Create the first Cognito user from the AWS console or with the Cognito admin
+CLI after deployment. Keep `UseStubModels=true` while testing; change it to
+`false` only when Bedrock access and model spending have been explicitly
+approved.
+
 ---
 
 ## AnalystAgent as a Standalone Service

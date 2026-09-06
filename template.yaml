@@ -25,18 +25,34 @@ Parameters:
     AllowedValues: ['true', 'false']
     Description: Keep true until the AWS infrastructure has passed end-to-end tests.
 
+Conditions:
+  UseBedrock: !Equals [!Ref UseStubModels, 'false']
+
 Resources:
   TractionApi:
     Type: AWS::Serverless::HttpApi
     Properties:
+      Auth:
+        DefaultAuthorizer: CognitoAuthorizer
+        Authorizers:
+          CognitoAuthorizer:
+            JwtConfiguration:
+              issuer: !Sub 'https://cognito-idp.${AWS::Region}.amazonaws.com/${AuthUserPool}'
+              audience:
+                - !Ref AuthUserPoolClient
+            IdentitySource: "$request.header.Authorization"
       CorsConfiguration:
         AllowOrigins:
           - '*'
         AllowHeaders:
           - content-type
+          - authorization
         AllowMethods:
           - POST
           - OPTIONS
+      DefaultRouteSettings:
+        ThrottlingBurstLimit: 20
+        ThrottlingRateLimit: 10
 
   RunCycleFunction:
     Type: AWS::Serverless::Function
@@ -49,11 +65,14 @@ Resources:
             TableName: !Ref LedgerTable
         - S3ReadPolicy:
             BucketName: !Ref DataBucket
-        - Statement:
-            - Effect: Allow
-              Action:
-                - bedrock:InvokeModel
-              Resource: '*'
+        - !If
+          - UseBedrock
+          - Statement:
+              - Effect: Allow
+                Action:
+                  - bedrock:InvokeModel
+                Resource: '*'
+          - !Ref AWS::NoValue
       Events:
         RunCycle:
           Type: HttpApi
@@ -69,11 +88,14 @@ Resources:
       Runtime: python3.12
       Handler: traction.api.analyst_lambda.handler
       Policies:
-        - Statement:
-            - Effect: Allow
-              Action:
-                - bedrock:InvokeModel
-              Resource: '*'
+        - !If
+          - UseBedrock
+          - Statement:
+              - Effect: Allow
+                Action:
+                  - bedrock:InvokeModel
+                Resource: '*'
+          - !Ref AWS::NoValue
       Events:
         Analyst:
           Type: HttpApi
@@ -89,11 +111,14 @@ Resources:
       Runtime: python3.12
       Handler: traction.api.content_lambda.handler
       Policies:
-        - Statement:
-            - Effect: Allow
-              Action:
-                - bedrock:InvokeModel
-              Resource: '*'
+        - !If
+          - UseBedrock
+          - Statement:
+              - Effect: Allow
+                Action:
+                  - bedrock:InvokeModel
+                Resource: '*'
+          - !Ref AWS::NoValue
       Events:
         Content:
           Type: HttpApi
@@ -132,6 +157,32 @@ Resources:
         IgnorePublicAcls: true
         RestrictPublicBuckets: true
 
+  AuthUserPool:
+    Type: AWS::Cognito::UserPool
+    Properties:
+      UserPoolName: !Sub '${AWS::StackName}-users'
+      AutoVerifiedAttributes:
+        - email
+      UsernameAttributes:
+        - email
+      Policies:
+        PasswordPolicy:
+          MinimumLength: 12
+          RequireLowercase: true
+          RequireNumbers: true
+          RequireSymbols: true
+          RequireUppercase: true
+
+  AuthUserPoolClient:
+    Type: AWS::Cognito::UserPoolClient
+    Properties:
+      UserPoolId: !Ref AuthUserPool
+      GenerateSecret: false
+      ExplicitAuthFlows:
+        - ALLOW_USER_PASSWORD_AUTH
+        - ALLOW_USER_SRP_AUTH
+        - ALLOW_REFRESH_TOKEN_AUTH
+
 Outputs:
   ApiUrl:
     Description: HTTP API base URL
@@ -140,3 +191,7 @@ Outputs:
     Value: !Ref LedgerTable
   DataBucketName:
     Value: !Ref DataBucket
+  CognitoUserPoolId:
+    Value: !Ref AuthUserPool
+  CognitoClientId:
+    Value: !Ref AuthUserPoolClient
