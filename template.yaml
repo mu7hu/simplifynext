@@ -10,7 +10,6 @@ Globals:
       - x86_64
     Environment:
       Variables:
-        AWS_DEFAULT_REGION: !Ref AWS::Region
         USE_STUB_MODELS: !Ref UseStubModels
         LEDGER_BACKEND: dynamodb
         STORAGE_BACKEND: s3
