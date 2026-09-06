@@ -136,6 +136,18 @@ def node_approval_gate(state: TractionGraphState, approval_gate) -> dict[str, An
     proposed_plan = state["proposed_plan"]
     current_plan = state.get("approved_plan")
 
+    if state.get("approval_only"):
+        event = {
+            "timestamp": datetime.utcnow().isoformat(),
+            "node": "approval_gate",
+            "action": "PENDING",
+            "message": "Plan is ready and waiting for founder approval.",
+        }
+        return {
+            "approval_status": "PENDING",
+            "events": (state.get("events", []) + [event]),
+        }
+
     decision = approval_gate.evaluate(current_plan, proposed_plan)
 
     event = {

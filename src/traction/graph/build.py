@@ -77,7 +77,8 @@ def compile_traction_graph(
         route_after_approval,
         {
             "execute": "execute",
-            "founder_revision": "founder_revision"
+            "founder_revision": "founder_revision",
+            "end": END,
         }
     )
 

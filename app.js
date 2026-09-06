@@ -14,6 +14,8 @@ const state = {
   planFeedback: null,        // founder_feedback attached to a rejection (fed to the Strategist)
   liveCycle: null,            // response from the deployed /run-cycle endpoint
   cycleLoading: false,
+  liveRun: null,
+  runPollTimer: null,
   rejecting: false,          // reject feedback box open
   // FounderBrief.hard_exclusions: channel + reason. Only the five backend channels are valid.
   exclusions: [
@@ -137,6 +139,89 @@ function showAuthGate(message = '') {
 function showApp() {
   document.getElementById('authGate').hidden = true;
   document.getElementById('appShell').hidden = false;
+}
+
+function founderBriefPayload() {
+  const channelEnum = (name) => CHANNEL_ENUM[name] || name;
+  return {
+    startup_name: document.getElementById('productName')?.value || 'LedgerAI',
+    stage: document.getElementById('stage')?.value || 'SEED',
+    one_line_pitch: document.getElementById('pitch')?.value || 'Autonomous financial reconciliations and AI ledger software for mid-market CFOs',
+    total_budget: Number(document.getElementById('budget')?.value || BUDGET),
+    primary_goal: {
+      goal_type: document.getElementById('outcome')?.value || 'LEAD_SIGNUPS',
+      target_cac: Number(document.getElementById('targetCac')?.value || 120),
+      minimum_acceptable_volume: Number(document.getElementById('minVolume')?.value || 5),
+      metric_name: document.getElementById('metricName')?.value || 'Free trial signups',
+    },
+    initial_allocations: {},
+    soft_preferences: state.preferences.map((p) => ({ channel: channelEnum(p.channel), prior_belief_strength: Number(p.strength), founder_note: p.note })),
+    hard_exclusions: state.exclusions.map((e) => ({ channel: channelEnum(e.channel), reason: e.reason, is_permanent: true })),
+  };
+}
+
+async function saveFounderBrief() {
+  const payload = founderBriefPayload();
+  const res = await apiFetch('/briefs/ledger_ai', { method: 'PUT', body: JSON.stringify(payload) });
+  if (!res.ok) throw new Error(`Brief save failed (${res.status})`);
+  showToast('Founder brief saved to AWS.');
+}
+
+function renderLiveRunStatus() {
+  const run = state.liveRun;
+  if (!run) return '';
+  const labels = { RUNNING: 'Workflow running', WAITING_APPROVAL: 'Waiting for your approval', COMPLETE: 'Cycle complete', FAILED: 'Workflow failed' };
+  return `<div class="live-run-status ${String(run.status || '').toLowerCase()}"><span class="live-pulse"></span><strong>${labels[run.status] || run.status}</strong><span>${(run.events || []).length} agent events received</span>${run.run_id ? `<code>${esc(run.run_id)}</code>` : ''}</div>`;
+}
+
+function pollRun(runId) {
+  clearTimeout(state.runPollTimer);
+  const poll = async () => {
+    try {
+      const res = await apiFetch(`/runs/${encodeURIComponent(runId)}`);
+      if (!res.ok) throw new Error(`Run status failed (${res.status})`);
+      state.liveRun = await res.json();
+      render();
+      if (!['COMPLETE', 'FAILED'].includes(state.liveRun.status)) state.runPollTimer = setTimeout(poll, 1500);
+    } catch (err) {
+      showToast(err.message);
+      state.runPollTimer = setTimeout(poll, 3000);
+    }
+  };
+  poll();
+}
+
+async function startPlanningRun() {
+  if (state.cycleLoading) return;
+  state.cycleLoading = true;
+  render();
+  try {
+    const brief = founderBriefPayload();
+    await apiFetch('/briefs/ledger_ai', { method: 'PUT', body: JSON.stringify(brief) });
+    const res = await apiFetch('/runs', { method: 'POST', body: JSON.stringify({ startup_id: 'ledger_ai', cycle_id: PLAN_CYCLE_ID, total_budget: brief.total_budget, auto_approve: false, founder_brief: brief }) });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || data.error || `Run start failed (${res.status})`);
+    state.liveRun = data;
+    state.cycleLoading = false;
+    showToast('Planning run started. Watch Agent Activity for live events.');
+    pollRun(data.run_id);
+  } catch (err) {
+    state.cycleLoading = false;
+    showToast(err.message);
+    render();
+  }
+}
+
+async function approveLiveRun() {
+  const run = state.liveRun;
+  if (!run?.run_id) return;
+  state.cycleLoading = true;
+  render();
+  const res = await apiFetch(`/runs/${encodeURIComponent(run.run_id)}/approve`, { method: 'POST', body: JSON.stringify({ total_budget: Number(document.getElementById('budget')?.value || BUDGET) }) });
+  if (!res.ok) showToast(`Approval failed (${res.status})`);
+  else { showToast('Approval recorded. Execution and analysis resumed.'); state.liveRun.status = 'RUNNING'; pollRun(run.run_id); }
+  state.cycleLoading = false;
+  render();
 }
 
 const BUDGET = 2000;
@@ -524,8 +609,10 @@ function renderBrief() {
     </section>
 
     <div class="brief-actions">
-      <button class="btn btn-primary" data-action="save-brief">Save Brief</button>
+      <button class="btn btn-secondary" data-action="save-brief">Save Brief</button>
+      <button class="btn btn-primary" data-action="start-planning" ${state.cycleLoading ? 'disabled' : ''}>${state.cycleLoading ? '<span class="spin" aria-hidden="true"></span>Starting workflow…' : icon('rocket') + 'Start planning cycle'}</button>
     </div>
+    ${renderLiveRunStatus()}
   </div>`;
 }
 
@@ -648,6 +735,7 @@ function renderDashboard() {
       </div>
     </section>
 
+    ${renderLiveRunStatus()}
     <div class="kpi-row">
       ${kpis.map((k, i) => `
         <div class="kpi ${k.cls}" style="--i:${i}">
@@ -1223,6 +1311,7 @@ function rerenderChannelCard(channel) {
 
 function renderApproval() {
   const total = proposedTotal();
+  const liveWaiting = state.liveRun?.status === 'WAITING_APPROVAL';
   const editErrors = validatePlanEdits();
   const sumOk = Math.abs(total - BUDGET) <= BUDGET_TOLERANCE;
   const totalOk = editErrors.length === 0;
@@ -1401,8 +1490,8 @@ function renderApproval() {
         ${state.editMode
           ? '<button class="btn btn-secondary" type="button" data-action="save-edits">Save edits</button>'
           : '<button class="btn btn-secondary" type="button" data-action="edit">Edit</button>'}
-        <button class="btn btn-human" type="button" data-action="approve" ${(state.editMode && !totalOk) || state.rejecting || state.cycleLoading ? 'disabled' : ''}>
-          ${state.cycleLoading ? '<span class="spin" aria-hidden="true"></span>Running Cycle 5…' : `${planEdited() ? 'Approve edited plan' : 'Approve Cycle 5'} ${icon('arrowRight')}`}
+        <button class="btn btn-human" type="button" data-action="${liveWaiting ? 'approve-live-run' : 'approve'}" ${(state.editMode && !totalOk) || state.rejecting || state.cycleLoading ? 'disabled' : ''}>
+          ${state.cycleLoading ? '<span class="spin" aria-hidden="true"></span>Resuming workflow…' : `${liveWaiting ? 'Approve and resume execution' : (planEdited() ? 'Approve edited plan' : 'Approve Cycle 5')} ${icon('arrowRight')}`}
         </button>
       </div>
     </div>`;
@@ -1710,6 +1799,35 @@ function renderAnalytics() {
 }
 
 function renderActivity() {
+  if (state.liveRun) {
+    const run = state.liveRun;
+    const events = run.events || [];
+    const current = events[events.length - 1];
+    const reasoning = run.result?.strategy_summary || 'The supervisor is collecting context and coordinating the Strategist, validator, execution simulator and Analyst.';
+    return `
+    <div class="content-wrap">
+      <header class="page-head">
+        ${pageEyebrow(`Live · Cycle ${run.cycle_id || PLAN_CYCLE_ID}`, 'live')}
+        <h1 class="page-title">Agent Activity</h1>
+        <p class="page-sub">Live events from the current supervisor run. This page refreshes while the workflow is running.</p>
+        ${renderLiveRunStatus()}
+      </header>
+      <div class="activity-layout">
+        <div class="timeline">
+          ${events.length ? events.map((event, i) => `
+            <div class="timeline-entry">
+              <div class="tl-time">${esc(String(event.timestamp || '').slice(11, 19) || '--:--:--')}</div>
+              <div class="tl-rail"><span class="tl-dot ${i === events.length - 1 && run.status === 'RUNNING' ? 'teal' : ''}"></span><span class="tl-line"></span></div>
+              <div class="tl-card ${i === events.length - 1 ? 'tl-active' : ''}">
+                <div class="tl-chips"><span class="node-chip">${esc(event.node || 'workflow')}</span>${event.status ? `<span class="pass-chip">${esc(event.status)}</span>` : ''}</div>
+                <div class="tl-summary">${esc(event.message || event.action || 'Agent event received.')}</div>
+              </div>
+            </div>`).join('') : '<div class="content-loading"><span class="spin"></span>Waiting for the first agent event…</div>'}
+        </div>
+        <aside class="card reasoning-panel"><div class="card-label">Supervisor summary</div><div class="reasoning-body">${esc(reasoning)}</div>${run.status === 'WAITING_APPROVAL' ? `<button class="btn btn-human" type="button" data-action="approve-live-run">Approve and resume execution ${icon('arrowRight')}</button>` : ''}</aside>
+      </div>
+    </div>`;
+  }
   // Node names and messages follow graph/nodes.py: load_context → strategist → validate_plan
   // (→ strategist_repair → validate_plan on failure, max 2 retries) → approval_gate.
   const entries = [
@@ -1981,7 +2099,13 @@ document.addEventListener('click', (e) => {
 
   switch (action.dataset.action) {
     case 'save-brief':
-      showToast('Brief saved. The agent will use it from the next planning run.');
+      saveFounderBrief().catch((err) => showToast(err.message));
+      break;
+    case 'start-planning':
+      startPlanningRun();
+      break;
+    case 'approve-live-run':
+      approveLiveRun();
       break;
     case 'edit':
       state.editMode = true;

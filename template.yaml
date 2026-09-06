@@ -14,6 +14,7 @@ Globals:
         LEDGER_BACKEND: dynamodb
         STORAGE_BACKEND: s3
         DYNAMODB_LEDGER_TABLE: !Ref LedgerTable
+        RUN_TABLE_NAME: !Ref RunTable
         AWS_DATA_BUCKET: !Ref DataBucket
         MAX_AGENT_RETRIES: '2'
         MAX_GRAPH_ITERATIONS: '20'
@@ -49,6 +50,8 @@ Resources:
           - authorization
         AllowMethods:
           - POST
+          - GET
+          - PUT
           - OPTIONS
       DefaultRouteSettings:
         ThrottlingBurstLimit: 20
@@ -63,6 +66,8 @@ Resources:
       Policies:
         - DynamoDBCrudPolicy:
             TableName: !Ref LedgerTable
+        - DynamoDBCrudPolicy:
+            TableName: !Ref RunTable
         - S3ReadPolicy:
             BucketName: !Ref DataBucket
         - !If
@@ -80,6 +85,58 @@ Resources:
             ApiId: !Ref TractionApi
             Path: /run-cycle
             Method: POST
+
+  RunManagerFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: lambda_package/
+      Runtime: python3.12
+      Handler: traction.api.run_manager_lambda.handler
+      Environment:
+        Variables:
+          RUN_CYCLE_FUNCTION_NAME: !Ref RunCycleFunction
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref RunTable
+        - LambdaInvokePolicy:
+            FunctionName: !Ref RunCycleFunction
+      Events:
+        StartRun:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref TractionApi
+            Path: /runs
+            Method: POST
+        GetRun:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref TractionApi
+            Path: /runs/{run_id}
+            Method: GET
+        GetRunEvents:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref TractionApi
+            Path: /runs/{run_id}/events
+            Method: GET
+        ApproveRun:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref TractionApi
+            Path: /runs/{run_id}/approve
+            Method: POST
+        SaveBrief:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref TractionApi
+            Path: /briefs/{startup_id}
+            Method: PUT
+        GetBrief:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref TractionApi
+            Path: /briefs/{startup_id}
+            Method: GET
 
   AnalystFunction:
     Type: AWS::Serverless::Function
@@ -144,6 +201,19 @@ Resources:
       PointInTimeRecoverySpecification:
         PointInTimeRecoveryEnabled: true
 
+  RunTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: record_id
+          AttributeType: S
+      KeySchema:
+        - AttributeName: record_id
+          KeyType: HASH
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: true
+
   DataBucket:
     Type: AWS::S3::Bucket
     Properties:
@@ -189,6 +259,8 @@ Outputs:
     Value: !Sub 'https://${TractionApi}.execute-api.${AWS::Region}.amazonaws.com'
   LedgerTableName:
     Value: !Ref LedgerTable
+  RunTableName:
+    Value: !Ref RunTable
   DataBucketName:
     Value: !Ref DataBucket
   CognitoUserPoolId:
