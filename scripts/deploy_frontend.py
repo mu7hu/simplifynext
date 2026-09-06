@@ -21,14 +21,20 @@ def main() -> None:
     session = boto3.Session(profile_name=args.profile, region_name=args.region)
     cloudformation = session.client("cloudformation")
     template = (args.project_root / "frontend-template.yaml").read_text(encoding="utf-8")
+    stack_changed = False
     try:
         cloudformation.describe_stacks(StackName=args.stack)
-        cloudformation.update_stack(
-            StackName=args.stack,
-            TemplateBody=template,
-            Capabilities=["CAPABILITY_IAM"],
-        )
-        waiter = cloudformation.get_waiter("stack_update_complete")
+        try:
+            cloudformation.update_stack(
+                StackName=args.stack,
+                TemplateBody=template,
+                Capabilities=["CAPABILITY_IAM"],
+            )
+            stack_changed = True
+        except ClientError as exc:
+            if "No updates are to be performed" not in str(exc):
+                raise
+        waiter = cloudformation.get_waiter("stack_update_complete") if stack_changed else None
     except ClientError as exc:
         if "does not exist" not in str(exc):
             raise
@@ -37,16 +43,27 @@ def main() -> None:
             TemplateBody=template,
             Capabilities=["CAPABILITY_IAM"],
         )
+        stack_changed = True
         waiter = cloudformation.get_waiter("stack_create_complete")
-    waiter.wait(StackName=args.stack, WaiterConfig={"Delay": 15, "MaxAttempts": 80})
+    if waiter:
+        waiter.wait(StackName=args.stack, WaiterConfig={"Delay": 15, "MaxAttempts": 80})
 
     stack = cloudformation.describe_stacks(StackName=args.stack)["Stacks"][0]
     outputs = {item["OutputKey"]: item["OutputValue"] for item in stack.get("Outputs", [])}
     bucket = outputs["FrontendBucketName"]
     distribution_id = outputs["CloudFrontDistributionId"]
     s3 = session.client("s3")
-    content_types = {".html": "text/html", ".js": "application/javascript", ".css": "text/css"}
-    for name in ("index.html", "app.js", "styles.css"):
+    content_types = {
+        ".html": "text/html",
+        ".js": "application/javascript",
+        ".css": "text/css",
+        ".json": "application/json",
+    }
+    files = ["index.html", "app.js", "styles.css"]
+    fixture = args.project_root / "fixtures" / "content_package.fixture.json"
+    if fixture.exists():
+        files.append("fixtures/content_package.fixture.json")
+    for name in files:
         path = args.project_root / name
         s3.upload_file(
             str(path),
