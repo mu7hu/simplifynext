@@ -319,3 +319,24 @@ Function URL, `200` / `422` / `400` / `500`, **zero graph imports** (verified by
 * **No Complex Attribution Black Box**: We deliberately avoid opaque multi-touch attribution algorithms in favor of transparent, falsifiable channel experiments with explicit attribution warnings.
 * **No Reinforcement Learning / Black Box Weights**: Portfolio decisions use transparent, deterministic explore/exploit schedules suitable for explanation to founders and hackathon judges.
 * **No Unnecessary Infrastructure**: Zero Kubernetes, Kafka, or Redis. Clean, lightweight Python and SQLite.
+
+---
+
+## Frontend Web App
+
+The merged frontend is a dependency-free static web app for the Traction founder experience:
+
+| File | Purpose |
+|---|---|
+| `index.html` | Application shell and navigation |
+| `styles.css` | Visual design system and responsive layout |
+| `app.js` | Views, sample LedgerAI data, routing, and interactions |
+| `next-dollar-figma-prompt.md` | UI design specification |
+
+Run it locally with:
+
+```bash
+python -m http.server 8765
+```
+
+Then open `http://localhost:8765`. The current UI uses sample data and is ready for the frontend teammate to connect to the backend API after the serverless boundary is implemented.
