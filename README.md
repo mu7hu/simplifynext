@@ -1,4 +1,4 @@
-# The Next Dollar — "Traction" UI
+# The Next Dollar — "Augury" UI
 
 A web UI for **The Next Dollar**: an AI agent that manages a small business founder's marketing budget as a portfolio of experiments. The founder sets a brief and a monthly budget (S$2,000), the agent proposes a channel allocation each cycle, and **nothing runs until the founder approves it**.
 
@@ -39,7 +39,7 @@ Cycle status stepper (Brief → Plan → Approve → Launch & Measure → Reflec
 The most important page. The agent's proposed Cycle 5 plan: strategy summary, major uncertainties, and an allocation-changes table (current vs proposed spend, change, plain-language reason). Rows expand to show the hypothesis, audience, message angle, success threshold, and evaluation window.
 
 - **Edit mode** — proposed spend cells become inputs; the total is recalculated live and must equal S$2,000 before Approve enables.
-- **Content Drafts tab** — the per-channel messaging the agent proposes, editable while the plan is pending.
+- **Content Drafts tab** — renders the Content Generator Agent's `ContentPackage` (`src/traction/schemas/content.py`): one card per channel with a variant selector, a channel-shaped preview (search ad / LinkedIn / Meta / cold email / founder post) with `x/limit` character counters and length warnings, plus targeting and compliance notes. Read-only with respect to the plan; the only actions are Generate / Regenerate variants, which POST to the content Function URL. With `AUGURY_CONFIG.contentFunctionUrl` empty (see `index.html`) the tab previews `fixtures/content_package.fixture.json` filtered to the plan's channels, as the endpoint would; `?content=all` shows every fixture format, and `?content=empty` / `?content=error` preview the other states.
 - Sticky action bar: Reject / Edit / **Approve Cycle 5** (orange is reserved for founder actions).
 
 ### 4. Analytics (`#analytics`)

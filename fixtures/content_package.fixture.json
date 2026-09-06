@@ -1,0 +1,265 @@
+{
+  "cycle_id": 5,
+  "startup_name": "LedgerAI",
+  "items": [
+    {
+      "channel": "GOOGLE_SEARCH",
+      "experiment_id": "EXP-05-GOOG",
+      "format": "SEARCH_AD",
+      "hypothesis": "Branded and high-intent category keywords will keep delivering trial signups below S$60 CAC at higher spend.",
+      "audience": "Singapore small business owners and accountants searching for bookkeeping and reconciliation software.",
+      "message_angle": "Close your books in 3 hours, not 3 days.",
+      "assets": [
+        {
+          "variant_label": "A · outcome-led",
+          "format": "SEARCH_AD",
+          "headline": "Close Your Books in 3 Hours",
+          "body": "Automated bank reconciliation and month-end close for Singapore SMBs. Free 14-day trial.",
+          "call_to_action": "Start free",
+          "secondary_headlines": [
+            "LedgerAI for Accountants",
+            "Reconcile in Minutes",
+            "Book a demo today"
+          ],
+          "hashtags": [],
+          "char_counts": {
+            "headline": 27,
+            "body": 88,
+            "call_to_action": 10
+          },
+          "length_warnings": []
+        },
+        {
+          "variant_label": "B · pain-led",
+          "format": "SEARCH_AD",
+          "headline": "Still Reconciling Bank Statements By Hand?",
+          "body": "LedgerAI matches transactions automatically so month-end takes hours, not days.",
+          "call_to_action": "See it in action",
+          "secondary_headlines": [
+            "Built for 1–20 Person Teams",
+            "Bookkeeping Software for Singapore SMBs",
+            "Try LedgerAI Free"
+          ],
+          "hashtags": [],
+          "char_counts": {
+            "headline": 42,
+            "body": 79,
+            "call_to_action": 16
+          },
+          "length_warnings": [
+            "headline 42/30",
+            "secondary_headline 39/30"
+          ]
+        },
+        {
+          "variant_label": "C · proof-led",
+          "format": "SEARCH_AD",
+          "headline": "Trusted by 200+ SG Businesses",
+          "body": "Close faster with automated reconciliation. Rated 4.8/5 by Singapore accountants.",
+          "call_to_action": "Get a 15-min walkthrough",
+          "secondary_headlines": [
+            "Automated Month-End Close",
+            "No More Spreadsheets",
+            "Free Trial · No Card Needed"
+          ],
+          "hashtags": [],
+          "char_counts": {
+            "headline": 29,
+            "body": 81,
+            "call_to_action": 24
+          },
+          "length_warnings": []
+        }
+      ],
+      "targeting_notes": "Search: branded terms plus 'bank reconciliation software', 'month-end close', 'bookkeeping software singapore'. Exclude job-seeker and student intent. Geo: Singapore only.",
+      "compliance_notes": "Substantiate '200+ businesses' and the 4.8/5 rating with current figures before publishing. Avoid 'guaranteed' language around close times."
+    },
+    {
+      "channel": "FOUNDER_CONTENT",
+      "experiment_id": "EXP-05-FNDR",
+      "format": "FOUNDER_POST",
+      "hypothesis": "Founder-authored posts build trust with SMB owners and convert at a steadily declining CAC.",
+      "audience": "Accountants and SMB founders in Singapore following finance and operations topics.",
+      "message_angle": "Behind-the-scenes of automating month-end close at a real small business.",
+      "assets": [
+        {
+          "variant_label": "A · story-led",
+          "format": "FOUNDER_POST",
+          "headline": "What closing the books at a 12-person café taught us about month-end",
+          "body": "Last month we sat with Mei, who runs two cafés in Tiong Bahru. Her month-end close took three evenings.\n\nNot because the numbers were hard. Because 400 card transactions had to be matched to receipts by hand.\n\nWe plugged LedgerAI into her bank feed on a Tuesday. By Thursday the close was done in under three hours, and most of that was her reviewing exceptions we had flagged.\n\nIt's rarely a people problem. It's a tooling gap. Happy to share what we've learned about closing small-business books faster.",
+          "call_to_action": "DM me for a walkthrough",
+          "secondary_headlines": [],
+          "hashtags": [
+            "#SmallBusiness",
+            "#Accounting",
+            "#SingaporeSME",
+            "#MonthEndClose"
+          ],
+          "char_counts": {
+            "headline": 68,
+            "body": 505,
+            "call_to_action": 23
+          },
+          "length_warnings": []
+        },
+        {
+          "variant_label": "B · contrarian",
+          "format": "FOUNDER_POST",
+          "headline": "Unpopular opinion: your bookkeeper shouldn't be matching transactions",
+          "body": "Every accountant I talk to in Singapore spends the first week of the month doing the same thing: matching bank lines to invoices.\n\nThat is not accounting. That is data entry with a CPA's hourly rate.\n\nWe built LedgerAI so the matching happens while you sleep and your bookkeeper spends their time on the 5% that actually needs judgement.",
+          "call_to_action": "Reply if you want the before/after numbers",
+          "secondary_headlines": [],
+          "hashtags": [
+            "#Bookkeeping",
+            "#FounderLed",
+            "#FinanceOps"
+          ],
+          "char_counts": {
+            "headline": 69,
+            "body": 337,
+            "call_to_action": 42
+          },
+          "length_warnings": []
+        }
+      ],
+      "targeting_notes": "Publish from the founder's personal profile, Tuesday–Thursday 8–9am SGT. Tag the customer only with written consent.",
+      "compliance_notes": "Customer story requires written permission before naming the business or owner. Do not quote close-time figures beyond what the customer has confirmed."
+    },
+    {
+      "channel": "LINKEDIN",
+      "experiment_id": "EXP-05-LNKD",
+      "format": "LINKEDIN_SPONSORED",
+      "hypothesis": "Sponsored posts targeting finance roles can reach the ICP directly at acceptable CAC.",
+      "audience": "Finance managers and accountants at companies with 1–20 employees in Singapore.",
+      "message_angle": "Stop reconciling by hand.",
+      "assets": [
+        {
+          "variant_label": "A · pain-led",
+          "format": "LINKEDIN_SPONSORED",
+          "headline": "Stop reconciling by hand",
+          "body": "Finance managers at 1–20 person companies: most of your month-end is matching bank lines to invoices.\n\nLedgerAI automates the matching and flags only the exceptions, so month-end takes hours instead of days. If a faster close is on your roadmap this quarter, it's worth 15 minutes.",
+          "call_to_action": "Book a demo",
+          "secondary_headlines": [],
+          "hashtags": [
+            "#FinanceOps",
+            "#SME"
+          ],
+          "char_counts": {
+            "headline": 24,
+            "body": 281,
+            "call_to_action": 11
+          },
+          "length_warnings": []
+        },
+        {
+          "variant_label": "B · speed-led",
+          "format": "LINKEDIN_SPONSORED",
+          "headline": "LedgerAI: month-end close in 3 hours, not 3 days",
+          "body": "A question we hear every week from finance managers: can month-end be faster?\n\nYes. Automated bank reconciliation, exception-only review, and a close checklist that fills itself in. Built for Singapore companies with 1–20 employees.",
+          "call_to_action": "See it in action",
+          "secondary_headlines": [],
+          "hashtags": [
+            "#MonthEndClose",
+            "#Accounting"
+          ],
+          "char_counts": {
+            "headline": 48,
+            "body": 232,
+            "call_to_action": 16
+          },
+          "length_warnings": []
+        }
+      ],
+      "targeting_notes": "Sponsored content, single image. Target job titles: Finance Manager, Accountant, Controller. Company size 1–20, geo Singapore. Exclude current customers via matched audience.",
+      "compliance_notes": "Draft only. Verify the 'hours not days' claim against current customer data and add the standard trial terms in the landing page, not the ad."
+    },
+    {
+      "channel": "META",
+      "experiment_id": "EXP-05-META",
+      "format": "META_AD",
+      "hypothesis": "Short product-demo creative can reach owner-operators who are not yet searching for bookkeeping software.",
+      "audience": "Owner-operators of Singapore F&B and retail businesses with 1–10 staff.",
+      "message_angle": "Your books, closed while you sleep.",
+      "assets": [
+        {
+          "variant_label": "A · outcome-led",
+          "format": "META_AD",
+          "headline": "Your books, closed while you sleep",
+          "body": "LedgerAI connects to your bank, matches every transaction and gets your month-end close ready by morning.\nBuilt for Singapore F&B and retail owners.",
+          "call_to_action": "Start free",
+          "secondary_headlines": [],
+          "hashtags": [],
+          "char_counts": {
+            "headline": 34,
+            "body": 148,
+            "call_to_action": 10
+          },
+          "length_warnings": []
+        },
+        {
+          "variant_label": "B · curiosity-led",
+          "format": "META_AD",
+          "headline": "The 3-hour month-end close",
+          "body": "Most owner-operators lose two or three evenings a month to bookkeeping. Card transactions, supplier invoices, GST, all matched by hand.\nLedgerAI does the matching automatically and shows you only the handful of items that need a decision. Connect your bank feed in five minutes, run your first close the same week, and get your evenings back for the business.",
+          "call_to_action": "See it in action",
+          "secondary_headlines": [],
+          "hashtags": [],
+          "char_counts": {
+            "headline": 26,
+            "body": 359,
+            "call_to_action": 16
+          },
+          "length_warnings": [
+            "body 359/300"
+          ]
+        }
+      ],
+      "targeting_notes": "Placements: Facebook and Instagram feed, 15-second demo video. Interests: small business owners, F&B, retail. Geo Singapore, age 25–55.",
+      "compliance_notes": "No before/after claims without a dated customer example. GST-related copy must not imply LedgerAI files returns."
+    },
+    {
+      "channel": "COLD_EMAIL",
+      "experiment_id": "EXP-05-COLD",
+      "format": "COLD_EMAIL",
+      "hypothesis": "Direct outreach to accountants who manage several SMB clients converts to trials at under S$120.",
+      "audience": "Outsourced accountants and bookkeepers serving 5–30 Singapore SMB clients.",
+      "message_angle": "Reconcile every client in one morning.",
+      "assets": [
+        {
+          "variant_label": "A · outcome-led",
+          "format": "COLD_EMAIL",
+          "headline": "Reconcile every client in one morning",
+          "body": "Hi there,\n\nMost outsourced accountants I speak with run into the same thing at month-end: twenty clients, twenty bank feeds, and a week of matching transactions by hand.\n\nLedgerAI does the matching for every client automatically and hands you an exception list per client. Firms using it close their whole book of clients in a morning.\n\nWorth a quick look?",
+          "call_to_action": "Reply with a time that suits you and I'll send a 15-minute walkthrough.",
+          "secondary_headlines": [],
+          "hashtags": [],
+          "char_counts": {
+            "headline": 37,
+            "body": 356,
+            "call_to_action": 71
+          },
+          "length_warnings": []
+        },
+        {
+          "variant_label": "B · proof-led",
+          "format": "COLD_EMAIL",
+          "headline": "re: month-end across your SMB clients",
+          "body": "Hi there,\n\nQuick idea. A bookkeeping firm in Jurong with 24 SMB clients cut its month-end from six days to one after moving reconciliation to LedgerAI.\n\nSame clients, same bank feeds, no extra staff. The difference was that matching stopped being manual.\n\nHappy to show you their setup.",
+          "call_to_action": "Reply 'yes' and I'll send the case study.",
+          "secondary_headlines": [],
+          "hashtags": [],
+          "char_counts": {
+            "headline": 37,
+            "body": 286,
+            "call_to_action": 41
+          },
+          "length_warnings": []
+        }
+      ],
+      "targeting_notes": "Send from a named founder address to firm principals, Tuesday–Wednesday mornings. Max one follow-up after five days.",
+      "compliance_notes": "Include an unsubscribe line and the company's registered address (Singapore PDPA / Spam Control Act). The Jurong firm must approve being referenced."
+    }
+  ],
+  "summary": "Cycle 5: draft creative for 5 channel(s) aligned to each experiment's hypothesis and audience. Search leads with the 3-hour close promise, LinkedIn and founder posts lean on the tooling-gap story, Meta and cold email test outcome-led hooks for owner-operators and outsourced accountants.",
+  "disclaimer": "Draft creative for review. Does not set budgets or allocations, and must be fact-checked and brand-reviewed before publishing."
+}

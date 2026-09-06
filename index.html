@@ -3,8 +3,9 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Traction — The Next Dollar</title>
+  <title>Augury — The Next Dollar</title>
   <meta name="theme-color" content="#1F2A38" />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect width='24' height='24' rx='6' fill='%230097A7'/%3E%3Cpath fill='%23ffffff' d='M1.8 8.8C4.3 11.9 9.2 15 12 15.8 9 12.8 5 10.2 1.8 8.8ZM22.2 8.8C19.7 11.9 14.8 15 12 15.8 15 12.8 19 10.2 22.2 8.8Z'/%3E%3C/svg%3E" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
@@ -13,7 +14,7 @@
     // Apply the saved (or OS) theme before first paint to avoid a flash of the wrong theme
     (function () {
       var t = null;
-      try { t = localStorage.getItem('traction.theme'); } catch (e) {}
+      try { t = localStorage.getItem('augury.theme'); } catch (e) {}
       if (t !== 'dark' && t !== 'light') {
         t = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
       }
@@ -28,13 +29,14 @@
     <aside class="sidebar" aria-label="Primary">
       <div class="sidebar-brand">
         <div class="brand-logo" aria-hidden="true">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M3 17l6-6 4 4 8-8"/>
-            <path d="M15 7h6v6"/>
+          <!-- Augury mark: two swept wings meeting at a point -->
+          <svg viewBox="0 0 24 24" fill="currentColor">
+            <path d="M0.8 8C3.5 11.5 9 15.2 12 16 8.8 12.6 4.2 9.6 0.8 8Z"/>
+            <path d="M23.2 8C20.5 11.5 15 15.2 12 16 15.2 12.6 19.8 9.6 23.2 8Z"/>
           </svg>
         </div>
         <div class="brand-text">
-          <div class="brand-name">Traction</div>
+          <div class="brand-name">Augury</div>
           <div class="brand-sub">LedgerAI · Cycle 4</div>
         </div>
         <button class="sidebar-toggle" type="button" aria-label="Collapse sidebar" aria-expanded="true" title="Toggle sidebar">
@@ -86,13 +88,13 @@
           <span class="theme-switch" aria-hidden="true"><span></span></span>
         </button>
         <div class="footer-row">
-          <span class="footer-loop">Loop iteration</span>
-          <span class="footer-loop-val">4 / 12</span>
+          <span class="footer-loop">Cycle</span>
+          <span class="footer-loop-val">4 of 12</span>
         </div>
-        <div class="footer-progress" role="progressbar" aria-valuemin="0" aria-valuemax="12" aria-valuenow="4" aria-label="Loop progress" title="Loop iteration 4 of 12 · Budget cycle: Month 4">
+        <div class="footer-progress" role="progressbar" aria-valuemin="0" aria-valuemax="12" aria-valuenow="4" aria-label="Cycle progress" title="Cycle 4 of 12 · Evaluation windows: 14–30 days">
           <span style="width: 33.3%"></span>
         </div>
-        <div class="footer-cycle">Budget cycle: Month 4</div>
+        <div class="footer-cycle">Evaluation windows: 14–30 days</div>
       </div>
     </aside>
     <div class="nav-backdrop" aria-hidden="true"></div>
@@ -105,7 +107,7 @@
   </button>
   <aside class="help-panel" id="helpPanel" hidden>
     <div class="help-head">
-      <div class="help-title">How Traction works</div>
+      <div class="help-title">How Augury works</div>
       <button class="help-close" type="button" data-close-help aria-label="Close help">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
       </button>
@@ -124,6 +126,12 @@
   </aside>
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
+  <script>
+    // Frontend runtime config. Leave contentFunctionUrl empty to preview the Content Drafts tab
+    // from fixtures/content_package.fixture.json instead of calling the Content Generator Lambda.
+    // Set it to the deployed Function URL (POST { cycle_id, plan, ... } → ContentPackage) to go live.
+    window.AUGURY_CONFIG = { contentFunctionUrl: '' };
+  </script>
   <script src="app.js"></script>
 </body>
 </html>
