@@ -12,6 +12,8 @@ const state = {
   validationError: null,
   planStatus: 'pending',     // mirrors approval_status: 'pending' | 'approved' | 'edited' | 'rejected'
   planFeedback: null,        // founder_feedback attached to a rejection (fed to the Strategist)
+  liveCycle: null,            // response from the deployed /run-cycle endpoint
+  cycleLoading: false,
   rejecting: false,          // reject feedback box open
   // FounderBrief.hard_exclusions: channel + reason. Only the five backend channels are valid.
   exclusions: [
@@ -22,6 +24,79 @@ const state = {
     { channel: 'Founder Content', strength: 0.8, note: 'I strongly believe founder-led content is strategically important for building trust in B2B finance.' },
   ],
 };
+
+const AUTH_TOKEN_KEY = 'augury.idToken';
+const AUTH_REFRESH_KEY = 'augury.refreshToken';
+let sessionIdToken = '';
+
+function runtimeConfig() { return window.AUGURY_CONFIG || {}; }
+
+function authToken() {
+  if (sessionIdToken) return sessionIdToken;
+  try { return localStorage.getItem(AUTH_TOKEN_KEY) || ''; } catch (_) { return ''; }
+}
+
+function saveAuth(result) {
+  sessionIdToken = result.IdToken || '';
+  try {
+    localStorage.setItem(AUTH_TOKEN_KEY, result.IdToken || '');
+    if (result.RefreshToken) localStorage.setItem(AUTH_REFRESH_KEY, result.RefreshToken);
+  } catch (_) { /* storage unavailable */ }
+}
+
+function clearAuth() {
+  sessionIdToken = '';
+  try { localStorage.removeItem(AUTH_TOKEN_KEY); localStorage.removeItem(AUTH_REFRESH_KEY); } catch (_) { /* ignore */ }
+}
+
+function authErrorText(data) {
+  const codes = {
+    NotAuthorizedException: 'Incorrect username or password.',
+    UserNotFoundException: 'Incorrect username or password.',
+    PasswordResetRequiredException: 'This account needs a password reset in Cognito.',
+    UserNotConfirmedException: 'This account has not been confirmed in Cognito.',
+  };
+  return codes[data && data.__type && data.__type.split('#').pop()] || data?.message || 'Sign-in failed.';
+}
+
+async function signIn(username, password) {
+  const cfg = runtimeConfig();
+  const res = await fetch(`https://cognito-idp.${cfg.cognitoRegion}.amazonaws.com/`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/x-amz-json-1.1', 'x-amz-target': 'AWSCognitoIdentityProviderService.InitiateAuth' },
+    body: JSON.stringify({ AuthFlow: 'USER_PASSWORD_AUTH', ClientId: cfg.cognitoClientId, AuthParameters: { USERNAME: username, PASSWORD: password } }),
+  });
+  const data = await res.json();
+  if (!res.ok || !data.AuthenticationResult) throw new Error(authErrorText(data));
+  saveAuth(data.AuthenticationResult);
+  return data.AuthenticationResult;
+}
+
+async function apiFetch(path, options = {}) {
+  const cfg = runtimeConfig();
+  const headers = new Headers(options.headers || {});
+  headers.set('Authorization', `Bearer ${authToken()}`);
+  if (options.body && !headers.has('content-type')) headers.set('content-type', 'application/json');
+  const res = await fetch(`${cfg.apiBaseUrl}${path}`, { ...options, headers });
+  if (res.status === 401) {
+    clearAuth();
+    showAuthGate('Your session expired. Please sign in again.');
+  }
+  return res;
+}
+
+function showAuthGate(message = '') {
+  document.getElementById('appShell').hidden = true;
+  document.getElementById('authGate').hidden = false;
+  const error = document.getElementById('authError');
+  error.textContent = message;
+  error.hidden = !message;
+}
+
+function showApp() {
+  document.getElementById('authGate').hidden = true;
+  document.getElementById('appShell').hidden = false;
+}
 
 const BUDGET = 2000;
 const CURRENT_SPEND = { 'Google Search': 900, 'Founder Content': 600, 'LinkedIn Ads': 500 };
@@ -734,7 +809,7 @@ function buildExperimentPlan() {
 async function postContent(payload) {
   const { url, mode } = contentConfig();
   if (mode !== 'api') return fixtureContent(payload, mode);
-  const res = await fetch(url, {
+  const res = await apiFetch(new URL(url).pathname, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify(payload),
@@ -755,6 +830,40 @@ async function postContent(payload) {
     throw err;
   }
   return data;
+}
+
+async function runLiveCycle() {
+  if (state.cycleLoading) return;
+  state.cycleLoading = true;
+  render();
+  try {
+    const res = await apiFetch('/run-cycle', {
+      method: 'POST',
+      body: JSON.stringify({
+        startup_id: 'ledger_ai',
+        cycle_id: PLAN_CYCLE_ID,
+        total_budget: BUDGET,
+        auto_approve: true,
+      }),
+    });
+    const text = await res.text();
+    let data;
+    try { data = JSON.parse(text); } catch (_) { data = { detail: text }; }
+    if (!res.ok) {
+      const err = new Error(`Cycle endpoint returned ${res.status}`);
+      err.status = res.status;
+      err.data = data;
+      throw err;
+    }
+    state.liveCycle = data;
+    state.planStatus = data.approval_status === 'approved' ? 'approved' : state.planStatus;
+    showToast('Cycle approved and executed by the deployed workflow.');
+  } catch (err) {
+    showToast(`Cycle failed: ${describeContentError(err)}`);
+  } finally {
+    state.cycleLoading = false;
+    render();
+  }
 }
 
 // Dev-mode stand-in for the endpoint: serves the fixture, honouring only_channels
@@ -1251,8 +1360,8 @@ function renderApproval() {
         ${state.editMode
           ? '<button class="btn btn-secondary" type="button" data-action="save-edits">Save edits</button>'
           : '<button class="btn btn-secondary" type="button" data-action="edit">Edit</button>'}
-        <button class="btn btn-human" type="button" data-action="approve" ${(state.editMode && !totalOk) || state.rejecting ? 'disabled' : ''}>
-          ${planEdited() ? 'Approve edited plan' : 'Approve Cycle 5'} ${icon('arrowRight')}
+        <button class="btn btn-human" type="button" data-action="approve" ${(state.editMode && !totalOk) || state.rejecting || state.cycleLoading ? 'disabled' : ''}>
+          ${state.cycleLoading ? '<span class="spin" aria-hidden="true"></span>Running Cycle 5…' : `${planEdited() ? 'Approve edited plan' : 'Approve Cycle 5'} ${icon('arrowRight')}`}
         </button>
       </div>
     </div>`;
@@ -1882,8 +1991,12 @@ document.addEventListener('click', (e) => {
       if (action.disabled) return;
       state.planStatus = planEdited() ? 'edited' : 'approved';
       state.editMode = false;
-      showToast(planEdited() ? 'Edited plan approved after revalidation. Launching channels…' : 'Cycle 5 plan approved. Launching channels…');
       render();
+      runLiveCycle();
+      break;
+    case 'signout':
+      clearAuth();
+      showAuthGate('You have been signed out.');
       break;
   }
 });
@@ -2066,13 +2179,42 @@ function initTheme() {
 }
 
 // ---------- Boot ----------
-initTheme();
-initNav();
-// ?content=fixture|empty|error opens the Content Drafts tab directly in that preview state
-if (new URLSearchParams(location.search).has('content')) {
-  state.approvalTab = 'drafts';
-  ensureContent();
-  navigate('approval');
-} else {
-  navigate(location.hash.slice(1) || 'brief');
+async function boot() {
+  initTheme();
+  const form = document.getElementById('authForm');
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const button = form.querySelector('button');
+    const error = document.getElementById('authError');
+    button.disabled = true;
+    button.textContent = 'Signing in…';
+    error.hidden = true;
+    try {
+      await signIn(form.username.value.trim(), form.password.value);
+      form.reset();
+      showApp();
+      initNav();
+      if (new URLSearchParams(location.search).has('content')) {
+        state.approvalTab = 'drafts';
+        ensureContent();
+        navigate('approval');
+      } else navigate(location.hash.slice(1) || 'brief');
+    } catch (err) {
+      error.textContent = err.message;
+      error.hidden = false;
+    } finally {
+      button.disabled = false;
+      button.textContent = 'Sign in';
+    }
+  });
+  if (authToken()) {
+    showApp();
+    initNav();
+    if (new URLSearchParams(location.search).has('content')) {
+      state.approvalTab = 'drafts';
+      ensureContent();
+      navigate('approval');
+    } else navigate(location.hash.slice(1) || 'brief');
+  } else showAuthGate();
 }
+boot();

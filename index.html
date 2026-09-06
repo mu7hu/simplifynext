@@ -25,7 +25,27 @@
 <body>
   <a class="skip-link" href="#main">Skip to content</a>
 
-  <div class="app">
+  <section class="auth-gate" id="authGate" aria-labelledby="authTitle">
+    <div class="auth-card">
+      <div class="brand-logo auth-logo" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M0.8 8C3.5 11.5 9 15.2 12 16 8.8 12.6 4.2 9.6 0.8 8Z"/><path d="M23.2 8C20.5 11.5 15 15.2 12 16 15.2 12.6 19.8 9.6 23.2 8Z"/></svg>
+      </div>
+      <div class="brand-name">Augury</div>
+      <p class="auth-kicker">LedgerAI · secure workspace</p>
+      <h1 id="authTitle">Sign in to your workspace</h1>
+      <p class="auth-copy">Use your Cognito account to access the planning, approval and content-generation workflow.</p>
+      <form id="authForm">
+        <label for="authUsername">Username</label>
+        <input id="authUsername" name="username" type="text" autocomplete="username" required />
+        <label for="authPassword">Password</label>
+        <input id="authPassword" name="password" type="password" autocomplete="current-password" required />
+        <div class="auth-error" id="authError" role="alert" hidden></div>
+        <button class="btn btn-primary auth-submit" type="submit">Sign in</button>
+      </form>
+    </div>
+  </section>
+
+  <div class="app" id="appShell" hidden>
     <aside class="sidebar" aria-label="Primary">
       <div class="sidebar-brand">
         <div class="brand-logo" aria-hidden="true">
@@ -127,11 +147,15 @@
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
   <script>
-    // Frontend runtime config. Leave contentFunctionUrl empty to preview the Content Drafts tab
-    // from fixtures/content_package.fixture.json instead of calling the Content Generator Lambda.
-    // Set it to the deployed Function URL (POST { cycle_id, plan, ... } → ContentPackage) to go live.
-    window.AUGURY_CONFIG = { contentFunctionUrl: '' };
+    // Public frontend settings. Secrets are never stored here; Cognito handles authentication.
+    window.AUGURY_CONFIG = {
+      apiBaseUrl: 'https://xws83fkboa.execute-api.us-east-1.amazonaws.com',
+      contentFunctionUrl: 'https://xws83fkboa.execute-api.us-east-1.amazonaws.com/content',
+      cognitoRegion: 'us-east-1',
+      cognitoUserPoolId: 'us-east-1_irxzgkJjO',
+      cognitoClientId: '9auv2egl12ft3suhnj6harogb'
+    };
   </script>
-  <script src="app.js"></script>
+  <script src="app.js?v=20260907-3"></script>
 </body>
 </html>
