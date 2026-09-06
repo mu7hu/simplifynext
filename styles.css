@@ -132,6 +132,9 @@ button { font-family: inherit; }
 .auth-card input { width: 100%; box-sizing: border-box; }
 .auth-submit { width: 100%; margin-top: 20px; justify-content: center; }
 .auth-error { margin-top: 14px; padding: 10px 12px; border-radius: 8px; color: var(--danger, #b64131); background: rgba(232, 135, 91, .12); font-size: 13px; line-height: 1.4; }
+.auth-switch { margin-top: 20px; color: var(--text-muted); font-size: 13px; }
+.auth-switch button { border: 0; padding: 0; color: var(--accent); background: transparent; cursor: pointer; font: inherit; font-weight: 700; }
+.auth-switch button:hover { text-decoration: underline; }
 
 /* ============================================================
    Sidebar

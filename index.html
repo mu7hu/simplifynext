@@ -33,15 +33,20 @@
       <div class="brand-name">Augury</div>
       <p class="auth-kicker">LedgerAI · secure workspace</p>
       <h1 id="authTitle">Sign in to your workspace</h1>
-      <p class="auth-copy">Use your Cognito account to access the planning, approval and content-generation workflow.</p>
+      <p class="auth-copy" id="authCopy">Use your Cognito account to access the planning, approval and content-generation workflow.</p>
       <form id="authForm">
         <label for="authUsername">Username</label>
-        <input id="authUsername" name="username" type="text" autocomplete="username" required />
+        <input id="authUsername" name="username" type="email" autocomplete="username" required />
         <label for="authPassword">Password</label>
         <input id="authPassword" name="password" type="password" autocomplete="current-password" required />
+        <div id="authCodeWrap" hidden>
+          <label for="authCode">Email confirmation code</label>
+          <input id="authCode" name="code" inputmode="numeric" autocomplete="one-time-code" />
+        </div>
         <div class="auth-error" id="authError" role="alert" hidden></div>
         <button class="btn btn-primary auth-submit" type="submit">Sign in</button>
       </form>
+      <div class="auth-switch" id="authSwitch">New here? <button type="button" data-auth-mode="signup">Create an account</button></div>
     </div>
   </section>
 
@@ -156,6 +161,6 @@
       cognitoClientId: '9auv2egl12ft3suhnj6harogb'
     };
   </script>
-  <script src="app.js?v=20260907-3"></script>
+  <script src="app.js?v=20260907-4"></script>
 </body>
 </html>

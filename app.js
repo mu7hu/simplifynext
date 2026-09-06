@@ -28,6 +28,8 @@ const state = {
 const AUTH_TOKEN_KEY = 'augury.idToken';
 const AUTH_REFRESH_KEY = 'augury.refreshToken';
 let sessionIdToken = '';
+let authMode = 'signin';
+let pendingSignup = { username: '', password: '' };
 
 function runtimeConfig() { return window.AUGURY_CONFIG || {}; }
 
@@ -55,21 +57,60 @@ function authErrorText(data) {
     UserNotFoundException: 'Incorrect username or password.',
     PasswordResetRequiredException: 'This account needs a password reset in Cognito.',
     UserNotConfirmedException: 'This account has not been confirmed in Cognito.',
+    InvalidPasswordException: 'Password must be at least 8 characters.',
+    UsernameExistsException: 'An account with this email already exists. Sign in instead.',
+    CodeMismatchException: 'That confirmation code is incorrect.',
+    ExpiredCodeException: 'That confirmation code has expired. Create the account again.',
   };
-  return codes[data && data.__type && data.__type.split('#').pop()] || data?.message || 'Sign-in failed.';
+  const code = data && data.__type && data.__type.split('#').pop();
+  return codes[code] || data?.message || `Request failed${data?.__type ? ` (${code})` : ''}.`;
+}
+
+async function cognitoRequest(target, body) {
+  const cfg = runtimeConfig();
+  const res = await fetch(`https://cognito-idp.${cfg.cognitoRegion}.amazonaws.com/`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/x-amz-json-1.1', 'x-amz-target': `AWSCognitoIdentityProviderService.${target}` },
+    body: JSON.stringify(body),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(authErrorText(data));
+  return data;
 }
 
 async function signIn(username, password) {
   const cfg = runtimeConfig();
-  const res = await fetch(`https://cognito-idp.${cfg.cognitoRegion}.amazonaws.com/`, {
-    method: 'POST',
-    headers: { 'content-type': 'application/x-amz-json-1.1', 'x-amz-target': 'AWSCognitoIdentityProviderService.InitiateAuth' },
-    body: JSON.stringify({ AuthFlow: 'USER_PASSWORD_AUTH', ClientId: cfg.cognitoClientId, AuthParameters: { USERNAME: username, PASSWORD: password } }),
-  });
-  const data = await res.json();
-  if (!res.ok || !data.AuthenticationResult) throw new Error(authErrorText(data));
+  const data = await cognitoRequest('InitiateAuth', { AuthFlow: 'USER_PASSWORD_AUTH', ClientId: cfg.cognitoClientId, AuthParameters: { USERNAME: username, PASSWORD: password } });
+  if (!data.AuthenticationResult) throw new Error('Sign-in did not return an authentication token.');
   saveAuth(data.AuthenticationResult);
   return data.AuthenticationResult;
+}
+
+async function signUp(username, password) {
+  const cfg = runtimeConfig();
+  return cognitoRequest('SignUp', { ClientId: cfg.cognitoClientId, Username: username, Password: password, UserAttributes: [{ Name: 'email', Value: username }] });
+}
+
+async function confirmSignUp(username, code) {
+  const cfg = runtimeConfig();
+  return cognitoRequest('ConfirmSignUp', { ClientId: cfg.cognitoClientId, Username: username, ConfirmationCode: code });
+}
+
+function setAuthMode(mode) {
+  authMode = mode;
+  const confirm = mode === 'confirm';
+  const signup = mode === 'signup';
+  document.getElementById('authTitle').textContent = confirm ? 'Confirm your email' : (signup ? 'Create your workspace account' : 'Sign in to your workspace');
+  document.getElementById('authCopy').textContent = confirm ? 'Enter the code Cognito sent to your email address.' : (signup ? 'Create an account to access the planning and content workflow.' : 'Use your Cognito account to access the planning, approval and content-generation workflow.');
+  document.getElementById('authCodeWrap').hidden = !confirm;
+  document.getElementById('authPassword').hidden = confirm;
+  document.querySelector('label[for="authPassword"]').hidden = confirm;
+  document.getElementById('authUsername').readOnly = confirm;
+  const submit = document.querySelector('.auth-submit');
+  submit.textContent = confirm ? 'Confirm email' : (signup ? 'Create account' : 'Sign in');
+  const sw = document.getElementById('authSwitch');
+  sw.hidden = confirm;
+  sw.innerHTML = signup ? 'Already have an account? <button type="button" data-auth-mode="signin">Sign in</button>' : 'New here? <button type="button" data-auth-mode="signup">Create an account</button>';
 }
 
 async function apiFetch(path, options = {}) {
@@ -1851,6 +1892,12 @@ window.addEventListener('hashchange', () => navigate(location.hash.slice(1)));
 
 // ---------- Event delegation ----------
 document.addEventListener('click', (e) => {
+  const authModeButton = e.target.closest('[data-auth-mode]');
+  if (authModeButton) {
+    setAuthMode(authModeButton.dataset.authMode);
+    document.getElementById('authError').hidden = true;
+    return;
+  }
   if (e.target.closest('.sidebar-toggle')) { setNav(!isNavCollapsed()); return; }
   if (e.target.closest('.theme-toggle')) {
     applyTheme(document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark', true, true);
@@ -2181,6 +2228,7 @@ function initTheme() {
 // ---------- Boot ----------
 async function boot() {
   initTheme();
+  setAuthMode('signin');
   const form = document.getElementById('authForm');
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -2190,21 +2238,41 @@ async function boot() {
     button.textContent = 'Signing in…';
     error.hidden = true;
     try {
-      await signIn(form.username.value.trim(), form.password.value);
-      form.reset();
-      showApp();
-      initNav();
-      if (new URLSearchParams(location.search).has('content')) {
-        state.approvalTab = 'drafts';
-        ensureContent();
-        navigate('approval');
-      } else navigate(location.hash.slice(1) || 'brief');
+      const username = form.username.value.trim().toLowerCase();
+      if (authMode === 'confirm') {
+        await confirmSignUp(pendingSignup.username, form.code.value.trim());
+        await signIn(pendingSignup.username, pendingSignup.password);
+        pendingSignup = { username: '', password: '' };
+        form.reset();
+        showApp();
+        initNav();
+        navigate(location.hash.slice(1) || 'brief');
+      } else if (authMode === 'signup') {
+        pendingSignup = { username, password: form.password.value };
+        await signUp(username, form.password.value);
+        form.code.value = '';
+        setAuthMode('confirm');
+        document.getElementById('authUsername').value = username;
+        document.getElementById('authUsername').readOnly = true;
+        error.textContent = 'Account created. Check your email for the confirmation code.';
+        error.hidden = false;
+      } else {
+        await signIn(username, form.password.value);
+        form.reset();
+        showApp();
+        initNav();
+        if (new URLSearchParams(location.search).has('content')) {
+          state.approvalTab = 'drafts';
+          ensureContent();
+          navigate('approval');
+        } else navigate(location.hash.slice(1) || 'brief');
+      }
     } catch (err) {
       error.textContent = err.message;
       error.hidden = false;
     } finally {
       button.disabled = false;
-      button.textContent = 'Sign in';
+      button.textContent = authMode === 'confirm' ? 'Confirm email' : (authMode === 'signup' ? 'Create account' : 'Sign in');
     }
   });
   if (authToken()) {
