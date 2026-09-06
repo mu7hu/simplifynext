@@ -1,0 +1,8 @@
+{
+  "RunCycleFunction": {
+    "USE_STUB_MODELS": "true",
+    "LEDGER_BACKEND": "sqlite",
+    "STORAGE_BACKEND": "local",
+    "LEDGER_DB_PATH": "/tmp/traction-local.db"
+  }
+}

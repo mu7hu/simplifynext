@@ -177,6 +177,13 @@ sam local invoke RunCycleFunction --event events/run_cycle.json
 sam local start-api
 ```
 
+For local SAM invocation before AWS resources exist, override the persistence
+backends with the bundled local data:
+
+```bash
+sam local invoke RunCycleFunction --event events/run_cycle.json --env-vars events/local-env.json
+```
+
 Keep `UseStubModels=true` until the local SAM API and DynamoDB integration have
 been tested. Deploy only from the `aws-serverless` branch:
 
