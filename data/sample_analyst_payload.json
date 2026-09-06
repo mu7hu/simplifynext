@@ -1,0 +1,141 @@
+{
+  "cycle_id": 2,
+  "plan": {
+    "cycle_id": 2,
+    "total_budget": 1500.0,
+    "primary_goal": "Qualified Demo Bookings",
+    "allocations": [
+      {
+        "channel": "GOOGLE_SEARCH",
+        "experiment_id": "EXP-02-GOOG",
+        "current_budget": 0.0,
+        "proposed_budget": 500.0,
+        "proposed_share": 0.25,
+        "hypothesis": "hypothesis",
+        "audience": "Mid-market CFOs and Controllers evaluating finance software",
+        "message_angle": "angle",
+        "expected_outcome_range": null,
+        "confidence": 0.5,
+        "evaluation_window_days": 14,
+        "success_threshold": 350.0,
+        "reason": "reason",
+        "evidence_used": "evidence",
+        "is_exploration": false
+      },
+      {
+        "channel": "COLD_EMAIL",
+        "experiment_id": "EXP-02-COLD",
+        "current_budget": 0.0,
+        "proposed_budget": 500.0,
+        "proposed_share": 0.25,
+        "hypothesis": "hypothesis",
+        "audience": "Controllers and CFOs at mid-market finance teams",
+        "message_angle": "angle",
+        "expected_outcome_range": null,
+        "confidence": 0.5,
+        "evaluation_window_days": 14,
+        "success_threshold": 400.0,
+        "reason": "reason",
+        "evidence_used": "evidence",
+        "is_exploration": false
+      },
+      {
+        "channel": "FOUNDER_CONTENT",
+        "experiment_id": "EXP-02-FNDR",
+        "current_budget": 0.0,
+        "proposed_budget": 500.0,
+        "proposed_share": 0.25,
+        "hypothesis": "hypothesis",
+        "audience": "Founder personal LinkedIn brand followers",
+        "message_angle": "angle",
+        "expected_outcome_range": null,
+        "confidence": 0.5,
+        "evaluation_window_days": 30,
+        "success_threshold": 650.0,
+        "reason": "reason",
+        "evidence_used": "evidence",
+        "is_exploration": true
+      }
+    ],
+    "exploration_budget_pct": 0.25,
+    "exploitation_budget_pct": 0.5,
+    "strategy_summary": "summary",
+    "major_uncertainties": []
+  },
+  "results": [
+    {
+      "channel": "GOOGLE_SEARCH",
+      "experiment_id": "EXP-02-GOOG",
+      "spend": 800.0,
+      "primary_outcomes": 3,
+      "observed_cac": 266.67,
+      "conversion_rate": 0.05,
+      "click_through_rate": 0.07,
+      "days_observed": 14,
+      "evaluation_window_days": 14,
+      "is_window_complete": true,
+      "cost_efficiency_ratio": 1.0,
+      "raw_metrics": {}
+    },
+    {
+      "channel": "COLD_EMAIL",
+      "experiment_id": "EXP-02-COLD",
+      "spend": 600.0,
+      "primary_outcomes": 0,
+      "observed_cac": 600.0,
+      "conversion_rate": 0.0,
+      "click_through_rate": 0.005,
+      "days_observed": 14,
+      "evaluation_window_days": 14,
+      "is_window_complete": true,
+      "cost_efficiency_ratio": 1.0,
+      "raw_metrics": {}
+    },
+    {
+      "channel": "FOUNDER_CONTENT",
+      "experiment_id": "EXP-02-FNDR",
+      "spend": 450.0,
+      "primary_outcomes": 0,
+      "observed_cac": 450.0,
+      "conversion_rate": 0.0,
+      "click_through_rate": 0.02,
+      "days_observed": 12,
+      "evaluation_window_days": 30,
+      "is_window_complete": false,
+      "cost_efficiency_ratio": 1.0,
+      "raw_metrics": {}
+    }
+  ],
+  "benchmark_priors": [
+    {
+      "channel": "GOOGLE_SEARCH",
+      "median_cac": 320.0,
+      "min_cac": 220.0,
+      "max_cac": 550.0,
+      "avg_cpc": 11.5,
+      "avg_conversion_rate": 0.04,
+      "min_evaluation_days": 14,
+      "rationale": "High buyer intent"
+    },
+    {
+      "channel": "COLD_EMAIL",
+      "median_cac": 400.0,
+      "min_cac": 250.0,
+      "max_cac": 700.0,
+      "avg_cpc": 2.0,
+      "avg_conversion_rate": 0.015,
+      "min_evaluation_days": 14,
+      "rationale": "Niche CFO list"
+    },
+    {
+      "channel": "FOUNDER_CONTENT",
+      "median_cac": 650.0,
+      "min_cac": 300.0,
+      "max_cac": 1800.0,
+      "avg_cpc": 7.5,
+      "avg_conversion_rate": 0.003,
+      "min_evaluation_days": 30,
+      "rationale": "Slow, expensive for direct demo capture"
+    }
+  ]
+}

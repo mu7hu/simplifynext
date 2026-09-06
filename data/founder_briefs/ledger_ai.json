@@ -1,0 +1,27 @@
+{
+  "startup_name": "LedgerAI",
+  "stage": "Seed",
+  "one_line_pitch": "Autonomous financial reconciliations and AI ledger software for mid-market CFOs",
+  "total_budget": 2000.0,
+  "primary_goal": {
+    "goal_type": "DEMO_BOOKINGS",
+    "target_cac": 350.0,
+    "minimum_acceptable_volume": 5,
+    "metric_name": "Qualified Demo Bookings"
+  },
+  "initial_allocations": {
+    "GOOGLE_SEARCH": 0.2,
+    "LINKEDIN": 0.25,
+    "META": 0.15,
+    "COLD_EMAIL": 0.15,
+    "FOUNDER_CONTENT": 0.25
+  },
+  "soft_preferences": [
+    {
+      "channel": "FOUNDER_CONTENT",
+      "prior_belief_strength": 0.8,
+      "founder_note": "I strongly believe founder-led content is strategically important for building trust in B2B finance."
+    }
+  ],
+  "hard_exclusions": []
+}

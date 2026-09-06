@@ -1,0 +1,93 @@
+{
+  "cycle_id": 2,
+  "plan": {
+    "cycle_id": 2,
+    "total_budget": 1500.0,
+    "primary_goal": "Qualified Demo Bookings",
+    "allocations": [
+      {
+        "channel": "GOOGLE_SEARCH",
+        "experiment_id": "EXP-02-GOOG",
+        "current_budget": 0.0,
+        "proposed_budget": 500.0,
+        "proposed_share": 0.25,
+        "hypothesis": "hypothesis",
+        "audience": "Mid-market CFOs and Controllers evaluating finance software",
+        "message_angle": "angle",
+        "expected_outcome_range": null,
+        "confidence": 0.5,
+        "evaluation_window_days": 14,
+        "success_threshold": 350.0,
+        "reason": "reason",
+        "evidence_used": "evidence",
+        "is_exploration": false
+      },
+      {
+        "channel": "COLD_EMAIL",
+        "experiment_id": "EXP-02-COLD",
+        "current_budget": 0.0,
+        "proposed_budget": 500.0,
+        "proposed_share": 0.25,
+        "hypothesis": "hypothesis",
+        "audience": "Controllers and CFOs at mid-market finance teams",
+        "message_angle": "angle",
+        "expected_outcome_range": null,
+        "confidence": 0.5,
+        "evaluation_window_days": 14,
+        "success_threshold": 400.0,
+        "reason": "reason",
+        "evidence_used": "evidence",
+        "is_exploration": false
+      },
+      {
+        "channel": "FOUNDER_CONTENT",
+        "experiment_id": "EXP-02-FNDR",
+        "current_budget": 0.0,
+        "proposed_budget": 500.0,
+        "proposed_share": 0.25,
+        "hypothesis": "hypothesis",
+        "audience": "Founder personal LinkedIn brand followers",
+        "message_angle": "angle",
+        "expected_outcome_range": null,
+        "confidence": 0.5,
+        "evaluation_window_days": 30,
+        "success_threshold": 650.0,
+        "reason": "reason",
+        "evidence_used": "evidence",
+        "is_exploration": true
+      }
+    ],
+    "exploration_budget_pct": 0.25,
+    "exploitation_budget_pct": 0.5,
+    "strategy_summary": "summary",
+    "major_uncertainties": []
+  },
+  "founder_brief": {
+    "startup_name": "LedgerAI",
+    "stage": "Seed",
+    "one_line_pitch": "Autonomous financial reconciliations and AI ledger software for mid-market CFOs",
+    "total_budget": 2000.0,
+    "primary_goal": {
+      "goal_type": "DEMO_BOOKINGS",
+      "target_cac": 350.0,
+      "minimum_acceptable_volume": 5,
+      "metric_name": "Qualified Demo Bookings"
+    },
+    "initial_allocations": {
+      "GOOGLE_SEARCH": 0.2,
+      "LINKEDIN": 0.25,
+      "META": 0.15,
+      "COLD_EMAIL": 0.15,
+      "FOUNDER_CONTENT": 0.25
+    },
+    "soft_preferences": [
+      {
+        "channel": "FOUNDER_CONTENT",
+        "prior_belief_strength": 0.8,
+        "founder_note": "I strongly believe founder-led content is strategically important for building trust in B2B finance."
+      }
+    ],
+    "hard_exclusions": []
+  },
+  "variants": 3
+}

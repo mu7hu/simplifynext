@@ -508,6 +508,21 @@ class StubBaseChatModel:
         return AIMessage(content=f"Stub response for {self.agent_type}")
 
 
+def _resolve_model_id(agent_type: str) -> str:
+    """Map an agent type to its configured Bedrock model id (config-driven, never constructed)."""
+    if agent_type == "strategist":
+        return settings.bedrock_strategist_model
+    if agent_type == "analyst":
+        if settings.analyst_use_escalation:
+            return settings.bedrock_analyst_escalation_model
+        return settings.bedrock_analyst_model
+    if agent_type == "content":
+        if settings.content_use_escalation:
+            return settings.bedrock_content_escalation_model
+        return settings.bedrock_content_model
+    return settings.bedrock_default_model
+
+
 class ModelFactory:
     """Central factory for instantiating Bedrock or Stub LLM instances."""
 
@@ -517,25 +532,38 @@ class ModelFactory:
         if settings.use_stub_models:
             return StubBaseChatModel(agent_type=agent_type)
 
-        # Attempt to use real AWS Bedrock ChatBedrockConverse
+        # Attempt to use real AWS Bedrock ChatBedrockConverse. boto3's default
+        # credential chain (env vars / shared profile / instance role) is used;
+        # no keys are ever prompted for or cached here.
         try:
             from langchain_aws import ChatBedrockConverse
-            if agent_type == "strategist":
-                model_id = settings.bedrock_strategist_model
-            elif agent_type == "analyst":
-                model_id = settings.bedrock_analyst_model
-            else:
-                model_id = settings.bedrock_default_model
 
             return ChatBedrockConverse(
-                model=model_id,
+                model=_resolve_model_id(agent_type),
                 region_name=settings.aws_default_region,
                 credentials_profile_name=settings.aws_profile,
-                temperature=0.0
+                temperature=0.0,
             )
         except Exception:
             # Fallback cleanly to stub if Bedrock connection fails
             return StubBaseChatModel(agent_type=agent_type)
+
+    @staticmethod
+    def bedrock_credentials_available() -> bool:
+        """Best-effort check for usable AWS credentials via boto3's default chain.
+
+        Returns False when offline-stub mode is forced or no credentials resolve,
+        so callers can pick the deterministic Stub agent without raising.
+        """
+        if settings.use_stub_models:
+            return False
+        try:  # pragma: no cover - depends on ambient AWS environment
+            import boto3
+
+            creds = boto3.Session(profile_name=settings.aws_profile).get_credentials()
+            return creds is not None
+        except Exception:  # pragma: no cover
+            return False
 
 
 def get_strategist_model() -> Any:
@@ -548,3 +576,22 @@ def get_analyst_model() -> Any:
 
 def get_default_model() -> Any:
     return ModelFactory.get_model("default")
+
+
+def get_content_model() -> Any:
+    return ModelFactory.get_model("content")
+
+
+def get_analyst_structured_model(schema: Type[BaseModel] = AnalysisReport) -> Any:
+    """Return a structured-output client for the Analyst.
+
+    Wraps the configured Bedrock model (or the offline stub) with
+    ``with_structured_output(schema)`` so callers get validated Pydantic objects.
+    Infra-agnostic: no long-lived state, safe to build per invocation / cold start.
+    """
+    return get_analyst_model().with_structured_output(schema)
+
+
+def get_content_structured_model(schema: Type[BaseModel]) -> Any:
+    """Structured-output client for the Content Generator (see ``get_analyst_structured_model``)."""
+    return get_content_model().with_structured_output(schema)

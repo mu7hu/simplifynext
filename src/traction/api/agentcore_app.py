@@ -6,15 +6,15 @@ from pydantic import BaseModel, Field
 
 from traction.config import settings
 from traction.schemas.founder import FounderBrief
-from traction.services.intake import MockIntakeProvider
-from traction.services.profiler import MockProfilerService
-from traction.services.execution import SimulatedExecutionService
+from traction.services.intake import get_intake_provider
+from traction.services.profiler import get_profiler_service
+from traction.services.execution import get_execution_service
 from traction.services.measurement import DefaultMeasurementService
-from traction.services.digest import MarkdownDigestService
+from traction.services.digest import get_digest_service
 from traction.simulator.market import MarketSimulator
 from traction.ledger.sqlite import SQLiteExperimentLedger
 from traction.agents.strategist import StrategistAgent
-from traction.agents.analyst import StubAnalystAgent
+from traction.agents.analyst import get_analyst_agent
 from traction.approval.cli import AutoApprovalGate
 from traction.graph.build import compile_traction_graph
 
@@ -39,14 +39,13 @@ class RunCycleResponse(BaseModel):
 
 # Global singletons
 ledger = SQLiteExperimentLedger(settings.ledger_db_path)
-profiler = MockProfilerService()
-intake = MockIntakeProvider()
-market_sim = MarketSimulator()
-execution_svc = SimulatedExecutionService(market_sim)
+profiler = get_profiler_service()
+intake = get_intake_provider()
+execution_svc = get_execution_service()
 measurement_svc = DefaultMeasurementService()
-digest_svc = MarkdownDigestService()
+digest_svc = get_digest_service()
 strategist = StrategistAgent()
-analyst = StubAnalystAgent()
+analyst = get_analyst_agent()
 auto_gate = AutoApprovalGate()
 
 graph = compile_traction_graph(
