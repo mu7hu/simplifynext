@@ -1,0 +1,11 @@
+{
+  "startup_id": "ledger_ai",
+  "startup_name": "LedgerAI",
+  "stage": "SEED",
+  "sector": "B2B_SAAS",
+  "target_acv": 18000.0,
+  "sales_cycle_days": 45,
+  "primary_outcome_metric": "Qualified Demo Bookings",
+  "total_budget": 2000.0,
+  "target_cac": 350.0
+}

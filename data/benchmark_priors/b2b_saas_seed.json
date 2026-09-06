@@ -1,0 +1,52 @@
+[
+  {
+    "channel": "GOOGLE_SEARCH",
+    "median_cac": 320.0,
+    "min_cac": 220.0,
+    "max_cac": 550.0,
+    "avg_cpc": 11.5,
+    "avg_conversion_rate": 0.04,
+    "min_evaluation_days": 14,
+    "rationale": "High buyer intent for B2B financial software categories"
+  },
+  {
+    "channel": "LINKEDIN",
+    "median_cac": 580.0,
+    "min_cac": 350.0,
+    "max_cac": 1100.0,
+    "avg_cpc": 16.0,
+    "avg_conversion_rate": 0.02,
+    "min_evaluation_days": 30,
+    "rationale": "Long consideration cycle; enterprise titles have high CPC"
+  },
+  {
+    "channel": "META",
+    "median_cac": 750.0,
+    "min_cac": 450.0,
+    "max_cac": 1500.0,
+    "avg_cpc": 3.2,
+    "avg_conversion_rate": 0.005,
+    "min_evaluation_days": 14,
+    "rationale": "Low immediate intent for B2B; high bounce rate on demo bookings"
+  },
+  {
+    "channel": "COLD_EMAIL",
+    "median_cac": 400.0,
+    "min_cac": 250.0,
+    "max_cac": 700.0,
+    "avg_cpc": 2.0,
+    "avg_conversion_rate": 0.015,
+    "min_evaluation_days": 14,
+    "rationale": "Cost effective for niche CFO list; risk of domain burn if scaled"
+  },
+  {
+    "channel": "FOUNDER_CONTENT",
+    "median_cac": 650.0,
+    "min_cac": 300.0,
+    "max_cac": 1800.0,
+    "avg_cpc": 7.5,
+    "avg_conversion_rate": 0.003,
+    "min_evaluation_days": 30,
+    "rationale": "High long-term brand equity, but slow and expensive for direct short-term demo capture"
+  }
+]
