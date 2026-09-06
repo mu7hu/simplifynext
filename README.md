@@ -149,6 +149,47 @@ response = entrypoint({
 })
 ```
 
+## Serverless AWS Deployment (SAM)
+
+The repository now includes a serverless deployment boundary without requiring
+Bedrock AgentCore. The first AWS shape is intentionally simple:
+
+```text
+API Gateway HTTP API -> RunCycle Lambda -> DynamoDB ledger + S3 data bucket
+                     -> optional Bedrock model calls
+S3 + CloudFront      -> static frontend
+```
+
+The local SQLite and filesystem backends remain available for tests. AWS uses
+`DynamoDBExperimentLedger` and the S3 JSON store selected by environment
+variables. The infrastructure is defined in `template.yaml` and packaged as a
+Lambda container image so Linux-compatible native dependencies are built in a
+Docker environment.
+
+### Build locally with AWS SAM
+
+Install AWS SAM CLI and Docker Desktop, then run:
+
+```bash
+sam validate --lint
+sam build --use-container
+sam local invoke RunCycleFunction --event events/run_cycle.json
+sam local start-api
+```
+
+Keep `UseStubModels=true` until the local SAM API and DynamoDB integration have
+been tested. Deploy only from the `aws-serverless` branch:
+
+```bash
+sam deploy --guided --profile simplifynext
+```
+
+The template creates the API, three Lambda functions, a pay-per-request
+DynamoDB table, and a private S3 data bucket. Upload the JSON files under
+`data/founder_briefs`, `data/example_profiles`, and `data/benchmark_priors` to
+the bucket after deployment. Never upload `.env`, credentials, SQLite files,
+or the local virtual environment.
+
 ---
 
 ## AnalystAgent as a Standalone Service

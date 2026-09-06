@@ -20,6 +20,7 @@ from typing import Any, Optional
 
 from traction.schemas.profile import StartupProfile, BenchmarkPrior, StartupStage, IndustrySector
 from traction.schemas.experiment import Channel
+from traction.storage.json_store import JsonStore
 
 _DEFAULT_PROFILE_DIR = os.path.join("data", "example_profiles")
 _DEFAULT_PRIORS_DIR = os.path.join("data", "benchmark_priors")
@@ -180,6 +181,43 @@ class FileProfilerService(ProfilerService):
             if os.path.exists(path):
                 data = _load_json(path)
                 return [BenchmarkPrior.model_validate(p) for p in data]
+        return default_b2b_saas_seed_priors()
+
+
+class JsonProfilerService(ProfilerService):
+    """Profiler backed by JSON objects, suitable for an S3 data bucket."""
+
+    def __init__(self, store: JsonStore, profile_prefix: str = "example_profiles", priors_prefix: str = "benchmark_priors"):
+        self.store = store
+        self.profile_prefix = profile_prefix.strip("/")
+        self.priors_prefix = priors_prefix.strip("/")
+
+    @staticmethod
+    def _safe(startup_id: str) -> str:
+        return "".join(c for c in startup_id if c.isalnum() or c in ("_", "-")) or "default"
+
+    def get_startup_profile(self, startup_id: str) -> StartupProfile:
+        try:
+            data = self.store.get_json(f"{self.profile_prefix}/{self._safe(startup_id)}.json")
+            return StartupProfile.model_validate(data)
+        except Exception:
+            if startup_id == "ledger_ai":
+                return _ledger_ai_profile(startup_id)
+            raise
+
+    def get_benchmark_priors(self, startup_id: str) -> list[BenchmarkPrior]:
+        profile = self.get_startup_profile(startup_id)
+        candidates = [
+            f"{self.priors_prefix}/{self._safe(startup_id)}.json",
+            f"{self.priors_prefix}/{priors_key(profile.sector, profile.stage)}.json",
+            f"{self.priors_prefix}/{_sector_slug(profile.sector)}_seed.json",
+        ]
+        for key in candidates:
+            try:
+                data = self.store.get_json(key)
+                return [BenchmarkPrior.model_validate(item) for item in data]
+            except Exception:
+                continue
         return default_b2b_saas_seed_priors()
 
 
