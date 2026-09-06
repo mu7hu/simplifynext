@@ -40,15 +40,10 @@ Resources:
 
   RunCycleFunction:
     Type: AWS::Serverless::Function
-    Metadata:
-      Dockerfile: Dockerfile
-      DockerContext: .
-      DockerTag: traction-latest
     Properties:
-      PackageType: Image
-      ImageConfig:
-        Command:
-          - traction.api.run_cycle_lambda.handler
+      CodeUri: lambda_package/
+      Runtime: python3.12
+      Handler: traction.api.run_cycle_lambda.handler
       Policies:
         - DynamoDBCrudPolicy:
             TableName: !Ref LedgerTable
@@ -69,15 +64,10 @@ Resources:
 
   AnalystFunction:
     Type: AWS::Serverless::Function
-    Metadata:
-      Dockerfile: Dockerfile
-      DockerContext: .
-      DockerTag: traction-latest
     Properties:
-      PackageType: Image
-      ImageConfig:
-        Command:
-          - traction.api.analyst_lambda.handler
+      CodeUri: lambda_package/
+      Runtime: python3.12
+      Handler: traction.api.analyst_lambda.handler
       Policies:
         - Statement:
             - Effect: Allow
@@ -94,15 +84,10 @@ Resources:
 
   ContentFunction:
     Type: AWS::Serverless::Function
-    Metadata:
-      Dockerfile: Dockerfile
-      DockerContext: .
-      DockerTag: traction-latest
     Properties:
-      PackageType: Image
-      ImageConfig:
-        Command:
-          - traction.api.content_lambda.handler
+      CodeUri: lambda_package/
+      Runtime: python3.12
+      Handler: traction.api.content_lambda.handler
       Policies:
         - Statement:
             - Effect: Allow

@@ -7,6 +7,7 @@ implements the same repository contract for stateless Lambda functions.
 from __future__ import annotations
 
 from datetime import datetime, timezone
+from decimal import Decimal
 from typing import Any
 
 import boto3
@@ -37,6 +38,17 @@ class DynamoDBExperimentLedger(ExperimentLedgerRepository):
         return {"startup_id": startup_id, "entry_key": f"cycle#{cycle_id}#{channel_value}"}
 
     @staticmethod
+    def _ddb_value(value: Any) -> Any:
+        """Convert JSON/Pydantic numbers to DynamoDB-safe numeric values."""
+        if isinstance(value, float):
+            return Decimal(str(value))
+        if isinstance(value, list):
+            return [DynamoDBExperimentLedger._ddb_value(item) for item in value]
+        if isinstance(value, dict):
+            return {key: DynamoDBExperimentLedger._ddb_value(item) for key, item in value.items()}
+        return value
+
+    @staticmethod
     def _item_to_entry(item: dict[str, Any]) -> LedgerEntry:
         return LedgerEntry(
             id=None,
@@ -60,7 +72,9 @@ class DynamoDBExperimentLedger(ExperimentLedgerRepository):
     def _update(self, startup_id: str, cycle_id: int, channel: Channel, values: dict[str, Any]) -> None:
         names = {f"#{name}": name for name in values}
         assignments = ", ".join(f"{alias} = :{name}" for alias, name in names.items())
-        expression_values = {f":{name}": value for name, value in values.items()}
+        expression_values = {
+            f":{name}": self._ddb_value(value) for name, value in values.items()
+        }
         self.table.update_item(
             Key=self._key(startup_id, cycle_id, channel),
             UpdateExpression=f"SET {assignments}",
@@ -92,7 +106,7 @@ class DynamoDBExperimentLedger(ExperimentLedgerRepository):
                     ":hypothesis": allocation.hypothesis,
                     ":audience": allocation.audience,
                     ":angle": allocation.message_angle,
-                    ":budget": allocation.proposed_budget,
+                    ":budget": self._ddb_value(allocation.proposed_budget),
                     ":timestamp": timestamp,
                     ":zero": 0,
                     ":insufficient": Verdict.INSUFFICIENT_DATA.value,

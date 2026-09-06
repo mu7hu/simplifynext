@@ -9,7 +9,6 @@ profile = "simplifynext"
 confirm_changeset = true
 capabilities = "CAPABILITY_IAM"
 parameter_overrides = "UseStubModels=\"true\""
-image_repositories = ["RunCycleFunction=811405442313.dkr.ecr.us-east-1.amazonaws.com/simplifynextdev400c0f8e/runcyclefunctionb281d5c1repo", "AnalystFunction=811405442313.dkr.ecr.us-east-1.amazonaws.com/simplifynextdev400c0f8e/analystfunctionce988607repo", "ContentFunction=811405442313.dkr.ecr.us-east-1.amazonaws.com/simplifynextdev400c0f8e/contentfunction4152b2c1repo"]
 
 [default.global.parameters]
 region = "us-east-1"

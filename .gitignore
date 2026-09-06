@@ -13,3 +13,5 @@ data/*.sqlite
 eval_results.csv
 eval_summary.json
 .DS_Store
+
+lambda_package/

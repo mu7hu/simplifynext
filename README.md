@@ -163,8 +163,8 @@ S3 + CloudFront      -> static frontend
 The local SQLite and filesystem backends remain available for tests. AWS uses
 `DynamoDBExperimentLedger` and the S3 JSON store selected by environment
 variables. The infrastructure is defined in `template.yaml` and packaged as a
-Lambda container image so Linux-compatible native dependencies are built in a
-Docker environment.
+Lambda ZIP packages. Native dependencies are built inside the AWS Lambda
+Python 3.12 Docker image so they are Linux-compatible.
 
 ### Build locally with AWS SAM
 
@@ -172,7 +172,8 @@ Install AWS SAM CLI and Docker Desktop, then run:
 
 ```bash
 sam validate --lint
-sam build --use-container
+.\scripts\build_lambda_package.ps1
+sam build
 sam local invoke RunCycleFunction --event events/run_cycle.json
 sam local start-api
 ```
@@ -188,8 +189,11 @@ Keep `UseStubModels=true` until the local SAM API and DynamoDB integration have
 been tested. Deploy only from the `aws-serverless` branch:
 
 ```bash
-sam deploy --guided --profile simplifynext
+sam deploy --template-file template.yaml --profile simplifynext --region us-east-1
 ```
+
+The deploy command uses `samconfig.toml` when present. The package-building
+script must be rerun whenever application code or runtime dependencies change.
 
 The template creates the API, three Lambda functions, a pay-per-request
 DynamoDB table, and a private S3 data bucket. Upload the JSON files under
