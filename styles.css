@@ -527,6 +527,7 @@ button { font-family: inherit; }
 
 /* Card variants shared across pages */
 .card-accent { position: relative; overflow: hidden; }
+.workspace-form .card-accent { overflow: visible; }
 .card-accent::before {
   content: "";
   position: absolute;
@@ -637,7 +638,7 @@ select {
   cursor: pointer;
 }
 .field-help { display:inline-grid; place-items:center; position:relative; width:15px; height:15px; margin-left:5px; border:1px solid var(--border-strong); border-radius:50%; color:var(--text-secondary); font-size:10px; font-weight:700; line-height:1; cursor:help; vertical-align:1px; }
-.field-help::after { content:attr(data-tooltip); position:absolute; z-index:20; left:50%; top:calc(100% + 8px); width:250px; padding:9px 11px; border:1px solid var(--border-light); border-radius:8px; background:var(--tooltip-bg); color:var(--heading-dark); box-shadow:var(--shadow-md); font-size:12px; font-weight:400; line-height:1.45; text-align:left; opacity:0; pointer-events:none; transform:translate(-50%,-3px); transition:opacity var(--dur-fast) var(--ease), transform var(--dur-fast) var(--ease); }
+.field-help::after { content:attr(data-tooltip); position:absolute; z-index:50; left:50%; bottom:calc(100% + 8px); width:250px; padding:9px 11px; border:1px solid var(--border-light); border-radius:8px; background:var(--tooltip-bg); color:var(--heading-dark); box-shadow:var(--shadow-md); font-size:12px; font-weight:400; line-height:1.45; text-align:left; opacity:0; pointer-events:none; transform:translate(-50%,3px); transition:opacity var(--dur-fast) var(--ease), transform var(--dur-fast) var(--ease); }
 .field-help:hover::after, .field-help:focus-visible::after { opacity:1; transform:translate(-50%,0); }
 .field-help:hover, .field-help:focus-visible { color:var(--accent); border-color:var(--accent); outline:none; }
 
