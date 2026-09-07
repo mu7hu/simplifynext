@@ -8,7 +8,7 @@ Open https://d2b62i37fl26ui.cloudfront.net/ and sign in or register and confirm 
 4. Approval displays that saved plan and its content. Request a revision to send feedback to the Strategist, or approve the reviewed version. The resumed worker executes the exact approved plan without regenerating it.
 5. The market simulator generates campaign telemetry. Measurement computes comparable metrics; the Bedrock Analyst evaluates them. The ledger and founder digest persist the results and learning.
 6. Dashboard, Analytics and Activity read the selected run from AWS. Refresh and sign-in reload the same workspace. The cycle-history selector switches between the latest 20 runs.
-7. Return to Founder Brief to start another cycle after completion. Prior cycle learning is loaded into the next Strategist prompt.
+7. Return to Founder Brief to start another cycle after completion. Prior cycle learning is loaded into hey gthe next Strategist prompt.
 
 ## What is live
 
