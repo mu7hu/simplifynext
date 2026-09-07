@@ -628,13 +628,13 @@ input::placeholder, textarea::placeholder { color: var(--text-muted); }
 textarea { resize: vertical; min-height: 84px; line-height: 1.55; }
 
 select {
-  appearance: none;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='9' viewBox='0 0 14 9'%3E%3Cpath d='M1 1l6 6 6-6' stroke='%23384655' stroke-width='1.8' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
-  background-repeat: no-repeat;
-  background-position: right 16px center;
-  padding-right: 42px;
+  appearance: auto;
+  background-image: none;
+  padding-right: 14px;
   cursor: pointer;
 }
+.field-help { display:inline-grid; place-items:center; width:15px; height:15px; margin-left:4px; border:1px solid var(--border-strong); border-radius:50%; color:var(--text-secondary); font-size:10px; font-weight:700; line-height:1; cursor:help; vertical-align:1px; }
+.field-help:hover, .field-help:focus-visible { color:var(--accent); border-color:var(--accent); outline:none; }
 
 /* Remove number spinners for cleaner money inputs */
 input[type="number"] { -moz-appearance: textfield; }
@@ -2712,9 +2712,7 @@ input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; marg
 :root[data-theme="dark"] .row-incomplete .badge { opacity: 0.5; }
 :root[data-theme="dark"] .step.current .step-num { color: #0097A7; }
 :root[data-theme="dark"] .nav-badge { box-shadow: 0 0 0 2px var(--sidebar-bg); }
-:root[data-theme="dark"] select {
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='9' viewBox='0 0 14 9'%3E%3Cpath d='M1 1l6 6 6-6' stroke='%23D5DDE6' stroke-width='1.8' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
-}
+:root[data-theme="dark"] select { background-image:none; }
 
 /* ============================================================
    Motion preferences
