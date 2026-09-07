@@ -70,6 +70,11 @@ async function loadWorkspace() {
   if (!state.workspace) $('main').innerHTML = '<div class="content-wrap"><p role="status">Loading your saved workspace…</p></div>';
   try {
     state.workspace = await api('/workspace'); state.error = '';
+    // The workspace endpoint intentionally returns lightweight run rows. Load the
+    // persisted run details as well so dashboard history and charts reflect every
+    // completed cycle in this account, not just the selected one.
+    const details = await Promise.all(state.workspace.runs.map(r => api('/runs/' + encodeURIComponent(r.run_id)).catch(() => r)));
+    state.workspace.runs = details;
     const selected = localStorage.getItem(selectionKey());
     state.run = state.workspace.runs.find(r => r.run_id === selected) || state.workspace.runs[0] || null;
     render(); schedule();
@@ -176,13 +181,38 @@ function metrics() {
   const spend=rows.reduce((s,r)=>s+Number(r.spend),0), outcomes=rows.reduce((s,r)=>s+Number(r.primary_outcomes),0);
   return `<div class="workspace-grid metric-grid"><section class="card"><div class="card-label">Simulated spend</div><h2>${money(spend)}</h2></section><section class="card"><div class="card-label">Simulated outcomes</div><h2>${outcomes}</h2></section><section class="card"><div class="card-label">Cost per outcome</div><h2>${outcomes ? money(spend/outcomes) : 'Not measurable'}</h2></section></div>`;
 }
+function portfolioChart() {
+  const runs = (state.workspace?.runs || []).filter(r => r.status === 'COMPLETE' && r.result?.results?.length)
+    .sort((a,b) => Number(a.cycle_id) - Number(b.cycle_id));
+  if (!runs.length) return `<section class="card section-gap"><h2 class="card-title">Cost per outcome over time</h2><p class="chart-sub">The live chart will appear after the first cycle completes.</p></section>`;
+  const W = 1080, H = 390, left = 70, right = 210, top = 28, bottom = 54;
+  const plotW = W-left-right, plotH = H-top-bottom;
+  const target = Number(state.workspace?.brief?.primary_goal?.target_cac || 0);
+  const series = channels.map((ch, i) => ({channel:ch, name:labels[ch], color:['#0097A7','#5574D9','#E38A3C','#8D63B8','#1F8F66'][i], values:runs.map(run => {
+    const row = (run.result.results || []).find(x => x.channel === ch);
+    return row && Number(row.primary_outcomes) > 0 ? Number(row.observed_cac) : null;
+  })})).filter(s => s.values.some(v => v !== null));
+  const numbers = series.flatMap(s => s.values.filter(v => v !== null));
+  const max = Math.max(target, ...numbers, 1) * 1.18;
+  const x = i => left + (runs.length === 1 ? plotW/2 : plotW*i/(runs.length-1));
+  const y = value => top + plotH - (value/max)*plotH;
+  const grid = [0, .25, .5, .75, 1].map(p => `<line class="chart-grid" x1="${left}" y1="${y(max*p)}" x2="${W-right}" y2="${y(max*p)}" stroke-width="1"/><text class="chart-label" x="${left-10}" y="${y(max*p)+4}" text-anchor="end" font-size="12">S$${Math.round(max*p)}</text>`).join('');
+  const lines = series.map(s => {
+    let path = '', dots = '';
+    s.values.forEach((v,i) => { if (v == null) return; path += `${path && s.values[i-1] != null ? ' L' : 'M'}${x(i)},${y(v)}`; dots += `<circle cx="${x(i)}" cy="${y(v)}" r="5" fill="var(--surface)" stroke="${s.color}" stroke-width="3"><title>Cycle ${runs[i].cycle_id} · ${s.name}: ${money(v)} per outcome</title></circle>`; });
+    return `<path class="chart-line" d="${path}" fill="none" stroke="${s.color}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>${dots}`;
+  }).join('');
+  const targetLine = target ? `<line x1="${left}" y1="${y(target)}" x2="${W-right}" y2="${y(target)}" stroke="#0097A7" stroke-width="2" stroke-dasharray="7 6"/><text x="${W-right+12}" y="${y(target)+4}" fill="#0097A7" font-size="12">Target ${money(target)}</text>` : '';
+  const labelsSvg = runs.map((r,i) => `<line class="chart-vgrid" x1="${x(i)}" y1="${top}" x2="${x(i)}" y2="${top+plotH}" stroke-width="1" stroke-dasharray="3 5"/><text class="chart-xlabel" x="${x(i)}" y="${H-18}" text-anchor="middle" font-size="13">Cycle ${r.cycle_id}</text>`).join('');
+  return `<section class="card section-gap"><h2 class="card-title">Cost per outcome over time</h2><p class="chart-sub">Completed cycles only · lower is better · gaps mean that channel recorded no outcomes.</p><div class="chart-wrap"><svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="Cost per outcome by channel across completed cycles">${grid}${labelsSvg}${targetLine}${lines}</svg></div><div class="chart-legend">${series.map(s=>`<span class="key"><span class="line" style="background:${s.color}"></span>${esc(s.name)}</span>`).join('')}${target?'<span class="key"><span class="line dashed"></span>Target</span>':''}</div></section>`;
+}
 function analytics() {
   const result=state.run?.result || {}, rows=result.results || [], verdicts=result.analysis_report?.verdicts || [];
-  return header('Analytics','Computed from the selected cycle’s generated simulation telemetry. These are not live campaign results.') + statusCard()+metrics()+(rows.length ? `<section class="card section-gap"><h2>Channel results</h2><div class="table-scroll"><table class="table"><thead><tr><th>Channel</th><th>Spend</th><th>Outcomes</th><th>Cost per outcome</th><th>Window</th><th>Analyst verdict</th></tr></thead><tbody>${rows.map(r=>{const v=verdicts.find(v=>v.channel===r.channel);return `<tr><td>${esc(labels[r.channel])}</td><td>${money(r.spend)}</td><td>${r.primary_outcomes}</td><td>${r.primary_outcomes?money(r.observed_cac):'No outcomes'}</td><td>${r.days_observed}/${r.evaluation_window_days} simulated days</td><td>${v?`<strong>${esc(v.verdict)}</strong><p>${esc(v.reasoning_summary)}</p>`:'Analysis pending'}</td></tr>`;}).join('')}</tbody></table></div></section>`:'') + (result.digest_markdown ? `<section class="card section-gap"><h2>Founder digest</h2><div class="preserve-lines">${esc(result.digest_markdown)}</div>${button('download','Download cycle report')}</section>`:'');
+  return header('Analytics','Computed from the selected cycle’s generated simulation telemetry. These are not live campaign results.') + statusCard()+metrics()+portfolioChart()+(rows.length ? `<section class="card section-gap"><h2>Channel results</h2><div class="table-scroll"><table class="table"><thead><tr><th>Channel</th><th>Spend</th><th>Outcomes</th><th>Cost per outcome</th><th>Window</th><th>Analyst verdict</th></tr></thead><tbody>${rows.map(r=>{const v=verdicts.find(v=>v.channel===r.channel);return `<tr><td>${esc(labels[r.channel])}</td><td>${money(r.spend)}</td><td>${r.primary_outcomes}</td><td>${r.primary_outcomes?money(r.observed_cac):'No outcomes'}</td><td>${r.days_observed}/${r.evaluation_window_days} simulated days</td><td>${v?`<strong>${esc(v.verdict)}</strong><p>${esc(v.reasoning_summary)}</p>`:'Analysis pending'}</td></tr>`;}).join('')}</tbody></table></div></section>`:'') + (result.digest_markdown ? `<section class="card section-gap"><h2>Founder digest</h2><div class="preserve-lines">${esc(result.digest_markdown)}</div>${button('download','Download cycle report')}</section>`:'');
 }
 function dashboard() {
   const w=state.workspace;
-  return header('Dashboard','Your saved workflow, plans and learning history.') + statusCard()+metrics()+`<section class="card section-gap"><h2>Cycle history</h2>${w.runs.length?`<div class="table-scroll"><table class="table"><thead><tr><th>Cycle</th><th>Status</th><th>Started</th><th>Events</th></tr></thead><tbody>${w.runs.map(r=>`<tr><td><button class="btn btn-ghost" data-run="${esc(r.run_id)}">Cycle ${r.cycle_id}</button></td><td>${esc(pretty(r.status))}</td><td>${esc(when(r.created_at))}</td><td>${r.events.length}</td></tr>`).join('')}</tbody></table></div>`:'<p>Your first cycle will appear here after you start planning.</p>'}</section>${state.run?.result?.learnings?.length?`<section class="card section-gap"><h2>Learning carried forward</h2><ul>${state.run.result.learnings.map(x=>`<li>${esc(x)}</li>`).join('')}</ul></section>`:''}`;
+  return header('Dashboard','Your saved workflow, plans and learning history.') + statusCard()+metrics()+portfolioChart()+`<section class="card section-gap"><h2>Cycle history</h2>${w.runs.length?`<div class="table-scroll"><table class="table"><thead><tr><th>Cycle</th><th>Status</th><th>Started</th><th>Events</th></tr></thead><tbody>${w.runs.map(r=>`<tr><td><button class="btn btn-ghost" data-run="${esc(r.run_id)}">Cycle ${r.cycle_id}</button></td><td>${esc(pretty(r.status))}</td><td>${esc(when(r.created_at))}</td><td>${r.events.length}</td></tr>`).join('')}</tbody></table></div>`:'<p>Your first cycle will appear here after you start planning.</p>'}</section>${state.run?.result?.learnings?.length?`<section class="card section-gap"><h2>Learning carried forward</h2><ul>${state.run.result.learnings.map(x=>`<li>${esc(x)}</li>`).join('')}</ul></section>`:''}`;
 }
 function activity() {
   const r=state.run;
