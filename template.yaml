@@ -1,0 +1,288 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: SimplifyNext Traction serverless application
+
+Globals:
+  Function:
+    Timeout: 900
+    MemorySize: 1024
+    Architectures:
+      - x86_64
+    Environment:
+      Variables:
+        USE_STUB_MODELS: !Ref UseStubModels
+        BEDROCK_DEFAULT_MODEL: amazon.nova-lite-v1:0
+        BEDROCK_STRATEGIST_MODEL: amazon.nova-lite-v1:0
+        BEDROCK_ANALYST_MODEL: amazon.nova-lite-v1:0
+        BEDROCK_CONTENT_MODEL: amazon.nova-lite-v1:0
+        CONTENT_VARIANTS_PER_CHANNEL: '2'
+        LEDGER_BACKEND: dynamodb
+        STORAGE_BACKEND: s3
+        DYNAMODB_LEDGER_TABLE: !Ref LedgerTable
+        RUN_TABLE_NAME: !Ref RunTable
+        AWS_DATA_BUCKET: !Ref DataBucket
+        MAX_AGENT_RETRIES: '2'
+        MAX_GRAPH_ITERATIONS: '20'
+
+Parameters:
+  UseStubModels:
+    Type: String
+    Default: 'false'
+    AllowedValues: ['true', 'false']
+    Description: Explicit offline mode. Hosted submission uses false.
+
+Conditions:
+  UseBedrock: !Equals [!Ref UseStubModels, 'false']
+
+Resources:
+  TractionApi:
+    Type: AWS::Serverless::HttpApi
+    Properties:
+      Auth:
+        DefaultAuthorizer: CognitoAuthorizer
+        Authorizers:
+          CognitoAuthorizer:
+            JwtConfiguration:
+              issuer: !Sub 'https://cognito-idp.${AWS::Region}.amazonaws.com/${AuthUserPool}'
+              audience:
+                - !Ref AuthUserPoolClient
+            IdentitySource: "$request.header.Authorization"
+      CorsConfiguration:
+        AllowOrigins:
+          - '*'
+        AllowHeaders:
+          - content-type
+          - authorization
+        AllowMethods:
+          - POST
+          - GET
+          - PUT
+          - OPTIONS
+      DefaultRouteSettings:
+        ThrottlingBurstLimit: 20
+        ThrottlingRateLimit: 10
+
+  RunCycleFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: lambda_package/
+      Runtime: python3.12
+      Handler: traction.api.run_cycle_lambda.handler
+      EventInvokeConfig:
+        MaximumRetryAttempts: 0
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref LedgerTable
+        - DynamoDBCrudPolicy:
+            TableName: !Ref RunTable
+        - S3ReadPolicy:
+            BucketName: !Ref DataBucket
+        - !If
+          - UseBedrock
+          - Statement:
+              - Effect: Allow
+                Action:
+                  - bedrock:InvokeModel
+                Resource: '*'
+          - !Ref AWS::NoValue
+      Events:
+        RunCycle:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref TractionApi
+            Path: /run-cycle
+            Method: POST
+
+  RunManagerFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: lambda_package/
+      Runtime: python3.12
+      Handler: traction.api.run_manager_lambda.handler
+      Environment:
+        Variables:
+          RUN_CYCLE_FUNCTION_NAME: !Ref RunCycleFunction
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref RunTable
+        - LambdaInvokePolicy:
+            FunctionName: !Ref RunCycleFunction
+      Events:
+        Workspace:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref TractionApi
+            Path: /workspace
+            Method: GET
+        RejectRun:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref TractionApi
+            Path: /runs/{run_id}/reject
+            Method: POST
+        StartRun:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref TractionApi
+            Path: /runs
+            Method: POST
+        GetRun:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref TractionApi
+            Path: /runs/{run_id}
+            Method: GET
+        GetRunEvents:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref TractionApi
+            Path: /runs/{run_id}/events
+            Method: GET
+        ApproveRun:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref TractionApi
+            Path: /runs/{run_id}/approve
+            Method: POST
+        SaveBrief:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref TractionApi
+            Path: /briefs/{startup_id}
+            Method: PUT
+        GetBrief:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref TractionApi
+            Path: /briefs/{startup_id}
+            Method: GET
+
+  AnalystFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: lambda_package/
+      Runtime: python3.12
+      Handler: traction.api.analyst_lambda.handler
+      Policies:
+        - !If
+          - UseBedrock
+          - Statement:
+              - Effect: Allow
+                Action:
+                  - bedrock:InvokeModel
+                Resource: '*'
+          - !Ref AWS::NoValue
+      Events:
+        Analyst:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref TractionApi
+            Path: /analyst
+            Method: POST
+
+  ContentFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: lambda_package/
+      Runtime: python3.12
+      Handler: traction.api.content_lambda.handler
+      Policies:
+        - !If
+          - UseBedrock
+          - Statement:
+              - Effect: Allow
+                Action:
+                  - bedrock:InvokeModel
+                Resource: '*'
+          - !Ref AWS::NoValue
+      Events:
+        Content:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref TractionApi
+            Path: /content
+            Method: POST
+
+  LedgerTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: startup_id
+          AttributeType: S
+        - AttributeName: entry_key
+          AttributeType: S
+      KeySchema:
+        - AttributeName: startup_id
+          KeyType: HASH
+        - AttributeName: entry_key
+          KeyType: RANGE
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: true
+
+  RunTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: record_id
+          AttributeType: S
+      KeySchema:
+        - AttributeName: record_id
+          KeyType: HASH
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: true
+
+  DataBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+
+  AuthUserPool:
+    Type: AWS::Cognito::UserPool
+    Properties:
+      UserPoolName: !Sub '${AWS::StackName}-users'
+      AutoVerifiedAttributes:
+        - email
+      UsernameAttributes:
+        - email
+      Policies:
+        PasswordPolicy:
+          MinimumLength: 8
+          RequireLowercase: false
+          RequireNumbers: false
+          RequireSymbols: false
+          RequireUppercase: false
+
+  AuthUserPoolClient:
+    Type: AWS::Cognito::UserPoolClient
+    Properties:
+      UserPoolId: !Ref AuthUserPool
+      GenerateSecret: false
+      ExplicitAuthFlows:
+        - ALLOW_USER_PASSWORD_AUTH
+        - ALLOW_USER_SRP_AUTH
+        - ALLOW_REFRESH_TOKEN_AUTH
+
+Outputs:
+  ApiUrl:
+    Description: HTTP API base URL
+    Value: !Sub 'https://${TractionApi}.execute-api.${AWS::Region}.amazonaws.com'
+  LedgerTableName:
+    Value: !Ref LedgerTable
+  RunTableName:
+    Value: !Ref RunTable
+  DataBucketName:
+    Value: !Ref DataBucket
+  CognitoUserPoolId:
+    Value: !Ref AuthUserPool
+  CognitoClientId:
+    Value: !Ref AuthUserPoolClient

@@ -3,6 +3,7 @@ __pycache__/
 *.pyc
 *.pyo
 .pytest_cache/
+.aws-sam/
 *.egg-info/
 dist/
 build/
@@ -12,3 +13,6 @@ data/*.sqlite
 eval_results.csv
 eval_summary.json
 .DS_Store
+
+lambda_package/
+artifacts/

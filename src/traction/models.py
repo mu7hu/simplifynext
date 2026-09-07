@@ -532,6 +532,10 @@ class ModelFactory:
         if settings.use_stub_models:
             return StubBaseChatModel(agent_type=agent_type)
 
+        if _resolve_model_id(agent_type).startswith('amazon.nova'):
+            from traction.bedrock_json import BedrockJsonModel
+            return BedrockJsonModel(_resolve_model_id(agent_type))
+
         # Attempt to use real AWS Bedrock ChatBedrockConverse. boto3's default
         # credential chain (env vars / shared profile / instance role) is used;
         # no keys are ever prompted for or cached here.
@@ -544,9 +548,8 @@ class ModelFactory:
                 credentials_profile_name=settings.aws_profile,
                 temperature=0.0,
             )
-        except Exception:
-            # Fallback cleanly to stub if Bedrock connection fails
-            return StubBaseChatModel(agent_type=agent_type)
+        except Exception as exc:
+            raise RuntimeError(f"Bedrock model initialization failed for {agent_type}") from exc
 
     @staticmethod
     def bedrock_credentials_available() -> bool:

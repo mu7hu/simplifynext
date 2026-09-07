@@ -1,0 +1,6 @@
+{
+  "startup_id": "ledger_ai",
+  "cycle_id": 1,
+  "total_budget": 2000.0,
+  "auto_approve": true
+}

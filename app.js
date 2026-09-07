@@ -1,1422 +1,300 @@
-/* ============================================================
-   The Next Dollar — "Traction" single-page app (vanilla JS)
-   ============================================================ */
-
-// ---------- App state ----------
-const state = {
-  view: 'brief',
-  approvalTab: 'plan',       // 'plan' | 'drafts'
-  editMode: false,
-  expandedRows: {},          // channel -> bool
-  spends: { 'Google Search': 1200, 'Founder Content': 500, 'LinkedIn Ads': 300 },
-  validationError: null,
-  planStatus: 'pending',     // 'pending' | 'approved' | 'rejected'
-  exclusions: ['TikTok', 'Influencer Marketing'],
-  preferences: ['LinkedIn Ads', 'Founder Content'],
-};
-
-const BUDGET = 2000;
-const CURRENT_SPEND = { 'Google Search': 900, 'Founder Content': 600, 'LinkedIn Ads': 500 };
-
-const PLAN_ROWS = [
-  {
-    channel: 'Google Search',
-    reason: 'Delivered signups at S$45 vs S$120 target — scaling up.',
-    detail: {
-      hypothesis: 'Branded and high-intent category keywords will keep delivering trial signups below S$60 CAC at higher spend.',
-      audience: 'Singapore small business owners and accountants searching for bookkeeping and reconciliation software.',
-      angle: '“Close your books in 3 hours, not 3 days.”',
-      threshold: 'CAC ≤ S$120 per free trial signup.',
-      window: '30 days',
-    },
-  },
-  {
-    channel: 'Founder Content',
-    reason: 'CAC improving but still above target. Hold and observe.',
-    detail: {
-      hypothesis: 'Founder-authored posts build trust with SMB owners and convert at a steadily declining CAC.',
-      audience: 'Accountants and SMB founders in Singapore following finance and operations topics.',
-      angle: 'Behind-the-scenes of automating month-end close at a real small business.',
-      threshold: 'CAC ≤ S$120 per free trial signup.',
-      window: '30 days',
-    },
-  },
-  {
-    channel: 'LinkedIn Ads',
-    reason: 'Only 8 days observed. Reducing to minimum while window completes.',
-    detail: {
-      hypothesis: 'Sponsored posts targeting finance roles can reach the ICP directly at acceptable CAC.',
-      audience: 'Finance managers and accountants at companies with 1–20 employees in Singapore.',
-      angle: '“Stop reconciling by hand.”',
-      threshold: 'CAC ≤ S$120 per free trial signup.',
-      window: '30 days (8 observed)',
-    },
-  },
-];
-
-const DRAFTS = [
-  {
-    channel: 'Google Search',
-    hypothesis: 'Branded and high-intent category keywords will keep delivering trial signups below S$60 CAC at higher spend.',
-    audience: 'Singapore small business owners and accountants searching for bookkeeping and reconciliation software.',
-    angle: 'Close your books in 3 hours, not 3 days.',
-  },
-  {
-    channel: 'Founder Content',
-    hypothesis: 'Founder-authored posts build trust with SMB owners and convert at a steadily declining CAC.',
-    audience: 'Accountants and SMB founders in Singapore following finance and operations topics.',
-    angle: 'Behind-the-scenes of automating month-end close at a real small business.',
-  },
-  {
-    channel: 'LinkedIn Ads',
-    hypothesis: 'Sponsored posts targeting finance roles can reach the ICP directly at acceptable CAC.',
-    audience: 'Finance managers and accountants at companies with 1–20 employees in Singapore.',
-    angle: 'Stop reconciling by hand.',
-  },
-];
-
-const RESULTS = [
-  { cycle: 'C1', channel: 'Google Search',   spend: 'S$900',   signups: '7',  cac: 'S$128', cacTone: 'bad',  cvr: '2.1%', ctr: '4.2%', days: '30d ✓', complete: true,  verdict: 'HOLD' },
-  { cycle: 'C1', channel: 'Founder Content', spend: 'S$600',   signups: '3',  cac: 'S$200', cacTone: 'bad',  cvr: '1.1%', ctr: '3.8%', days: '30d ✓', complete: true,  verdict: 'HOLD' },
-  { cycle: 'C1', channel: 'LinkedIn Ads',    spend: 'S$500',   signups: '1',  cac: 'S$500', cacTone: 'bad',  cvr: '0.4%', ctr: '1.1%', days: '30d ✓', complete: true,  verdict: 'CUT' },
-  { cycle: 'C2', channel: 'Google Search',   spend: 'S$1,100', signups: '14', cac: 'S$78',  cacTone: 'good', cvr: '3.2%', ctr: '5.1%', days: '30d ✓', complete: true,  verdict: 'SCALE' },
-  { cycle: 'C2', channel: 'Founder Content', spend: 'S$600',   signups: '5',  cac: 'S$120', cacTone: 'good', cvr: '1.8%', ctr: '4%',   days: '30d ✓', complete: true,  verdict: 'HOLD' },
-  { cycle: 'C2', channel: 'LinkedIn Ads',    spend: 'S$300',   signups: '—',  cac: '—',     cacTone: 'none', cvr: '—',    ctr: '0.6%', days: '30d ✓', complete: true,  verdict: 'CUT' },
-  { cycle: 'C3', channel: 'Google Search',   spend: 'S$1,300', signups: '21', cac: 'S$61',  cacTone: 'good', cvr: '4%',   ctr: '5.8%', days: '30d ✓', complete: true,  verdict: 'SCALE' },
-  { cycle: 'C3', channel: 'Founder Content', spend: 'S$500',   signups: '5',  cac: 'S$100', cacTone: 'good', cvr: '2%',   ctr: '3.5%', days: '30d ✓', complete: true,  verdict: 'HOLD' },
-  { cycle: 'C3', channel: 'LinkedIn Ads',    spend: 'S$200',   signups: '2',  cac: 'S$100', cacTone: 'good', cvr: '1%',   ctr: '1.8%', days: '30d ✓', complete: true,  verdict: 'HOLD' },
-  { cycle: 'C4', channel: 'Google Search',   spend: 'S$900',   signups: '20', cac: 'S$45',  cacTone: 'good', cvr: '4.5%', ctr: '6.1%', days: '22D / INCOMPLETE', complete: false, verdict: 'SCALE' },
-  { cycle: 'C4', channel: 'Founder Content', spend: 'S$600',   signups: '6',  cac: 'S$100', cacTone: 'good', cvr: '2.1%', ctr: '3.9%', days: '22D / INCOMPLETE', complete: false, verdict: 'HOLD' },
-  { cycle: 'C4', channel: 'LinkedIn Ads',    spend: 'S$500',   signups: '2',  cac: 'S$250', cacTone: 'bad',  cvr: '0.8%', ctr: '1.4%', days: '8D / INCOMPLETE',  complete: false, verdict: 'INSUFFICIENT DATA' },
-];
-
-const VERDICT_HISTORY = [
-  { channel: 'Google Search',   cycles: ['HOLD', 'SCALE', 'SCALE', 'SCALE'] },
-  { channel: 'Founder Content', cycles: ['HOLD', 'HOLD', 'HOLD', 'HOLD'] },
-  { channel: 'LinkedIn Ads',    cycles: ['CUT', 'CUT', 'HOLD', 'INSUFFICIENT DATA'] },
-];
-
-const CHART_SERIES = [
-  { name: 'Google Search',   color: '#0097A7', values: [128, 78, 61] },
-  { name: 'Founder Content', color: '#68DAF8', values: [200, 120, 100] },
-  { name: 'LinkedIn Ads',    color: '#9FCBFD', values: [500, null, 100] }, // null = no signups, CAC undefined
-];
-
-// ---------- Helpers ----------
-const fmt = (n) => 'S$' + n.toLocaleString('en-US');
-
-// "+S$300 (+33%)" / "−S$200 (−40%)"
-function fmtDelta(proposed, current) {
-  const delta = proposed - current;
-  const pct = Math.round((delta / current) * 100);
-  const sign = delta >= 0 ? '+' : '−';
-  return `${sign}${fmt(Math.abs(delta))} (${sign}${Math.abs(pct)}%)`;
+/* Augury: all business data is loaded from the authenticated workspace API. */
+'use strict';
+const cfg = window.AUGURY_CONFIG;
+const TOKEN = 'augury.idToken', REFRESH = 'augury.refreshToken';
+const state = { workspace: null, run: null, view: location.hash.slice(1) || 'brief', approvalTab: 'plan', busy: false, error: '', timer: null, authMode: 'signin' };
+const channels = ['GOOGLE_SEARCH', 'LINKEDIN', 'META', 'COLD_EMAIL', 'FOUNDER_CONTENT'];
+const labels = { GOOGLE_SEARCH: 'Google Search', LINKEDIN: 'LinkedIn', META: 'Meta', COLD_EMAIL: 'Cold Email', FOUNDER_CONTENT: 'Founder Content' };
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
+const money = (v) => v == null ? '—' : new Intl.NumberFormat('en-SG', { style:'currency', currency:'SGD' }).format(Number(v));
+const when = (v) => v ? new Date(v.endsWith('Z') || /[+-]\d\d:\d\d$/.test(v) ? v : v + 'Z').toLocaleString() : '—';
+const pretty = (s) => String(s || '').replaceAll('_',' ').toLowerCase();
+const active = (r) => r && ['QUEUED','RUNNING','WAITING_APPROVAL'].includes(r.status);
+const button = (action, text, disabled = false) => `<button type="button" class="btn btn-primary" data-action="${action}" ${disabled ? 'disabled' : ''}>${text}</button>`;
+const ICONS = { check:'<path d="m5 12 4 4L19 6"/>', trendUp:'<path d="m3 17 6-6 4 4 8-9"/>', trendDown:'<path d="m3 7 6 6 4-4 8 9"/>', wallet:'<path d="M4 7h16v12H4z"/><path d="M4 7V5h14"/><circle cx="16" cy="13" r="1"/>', users:'<circle cx="9" cy="8" r="3"/><path d="M3 20c0-3 2-5 6-5s6 2 6 5"/><path d="M16 11c3 0 5 2 5 5"/>', target:'<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/>', clock:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>' };
+function icon(name, cls='') { return `<svg class="${cls}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[name] || ''}</svg>`; }
+function countUp(value, prefix='', suffix='') { return `<span class="count" data-count="${Number(value)||0}" data-prefix="${esc(prefix)}" data-suffix="${esc(suffix)}">${esc(prefix)}${Number(value||0).toLocaleString('en-SG')}${esc(suffix)}</span>`; }
+function verdictBadge(v) { const value=String(v||'PENDING').replaceAll('_',' '); return `<span class="badge badge-${value.toLowerCase().replaceAll(' ','-')}">${esc(value)}</span>`; }
+function toast(text) { $('toast').textContent = text; $('toast').classList.add('show'); setTimeout(() => $('toast').classList.remove('show'), 4500); }
+function owner() { try { return JSON.parse(atob(localStorage.getItem(TOKEN).split('.')[1].replaceAll('-','+').replaceAll('_','/'))).sub; } catch { return ''; } }
+function selectionKey() { return 'augury.selectedRun.' + owner(); }
+function authGate(message = '') { clearTimeout(state.timer); $('appShell').hidden = true; $('authGate').hidden = false; $('authError').textContent = message; $('authError').hidden = !message; }
+async function cognito(target, body) {
+  const res = await fetch(`https://cognito-idp.${cfg.cognitoRegion}.amazonaws.com/`, { method:'POST', headers:{'content-type':'application/x-amz-json-1.1','x-amz-target':'AWSCognitoIdentityProviderService.' + target}, body:JSON.stringify(body) });
+  const data = await res.json(); if (!res.ok) throw new Error(data.message || data.__type || 'Authentication failed'); return data;
 }
-
-// Escape user-supplied text before interpolating into innerHTML
-function esc(s) {
-  return String(s)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
+function saveTokens(result) { localStorage.setItem(TOKEN, result.IdToken); if (result.RefreshToken) localStorage.setItem(REFRESH,result.RefreshToken); }
+let refreshing;
+async function refreshAuth() {
+  if (!refreshing) refreshing = cognito('InitiateAuth',{AuthFlow:'REFRESH_TOKEN_AUTH',ClientId:cfg.cognitoClientId,AuthParameters:{REFRESH_TOKEN:localStorage.getItem(REFRESH) || ''}}).then(d => saveTokens(d.AuthenticationResult)).finally(() => { refreshing = null; });
+  return refreshing;
 }
-
-// Inline SVG icons (Lucide-style, 24px grid, stroke-based). Decorative by default.
-const ICON_PATHS = {
-  lock: '<rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>',
-  star: '<polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>',
-  x: '<path d="M18 6 6 18"/><path d="m6 6 12 12"/>',
-  plus: '<path d="M5 12h14"/><path d="M12 5v14"/>',
-  check: '<path d="M20 6 9 17l-5-5"/>',
-  chevronDown: '<path d="m6 9 6 6 6-6"/>',
-  arrowRight: '<path d="M5 12h14"/><path d="m12 5 7 7-7 7"/>',
-  alert: '<path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/>',
-  info: '<circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/>',
-  clock: '<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>',
-  trendUp: '<polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/>',
-  pause: '<rect x="14" y="4" width="4" height="16" rx="1"/><rect x="6" y="4" width="4" height="16" rx="1"/>',
-  fileText: '<path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M10 9H8"/><path d="M16 13H8"/><path d="M16 17H8"/>',
-  trendDown: '<polyline points="22 17 13.5 8.5 8.5 13.5 2 7"/><polyline points="16 17 22 17 22 11"/>',
-  users: '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>',
-  target: '<circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/>',
-  wallet: '<path d="M19 7V4a1 1 0 0 0-1-1H5a2 2 0 0 0 0 4h15a1 1 0 0 1 1 1v4h-3a2 2 0 0 0 0 4h3a1 1 0 0 0 1-1v-2a1 1 0 0 0-1-1"/><path d="M3 5v14a2 2 0 0 0 2 2h15a1 1 0 0 0 1-1v-4"/>',
-  rocket: '<path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"/><path d="m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"/><path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0"/><path d="M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5"/>',
-};
-
-// Animated count-up for any element carrying data-count. The final formatted value is
-// already in the markup, so the number is correct before JS runs and for reduced-motion users.
-function animateCounters(root) {
-  const els = root.querySelectorAll('[data-count]');
-  if (!els.length) return;
-  const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  els.forEach((el, idx) => {
-    const target = Number(el.dataset.count);
-    if (!Number.isFinite(target)) return;
-    const prefix = el.dataset.prefix || '';
-    const suffix = el.dataset.suffix || '';
-    const format = (v) => prefix + Math.round(v).toLocaleString('en-US') + suffix;
-    if (reduce || target === 0) { el.textContent = format(target); return; }
-    const dur = Number(el.dataset.duration || 1200);
-    const start = performance.now() + Math.min(idx * 45, 500);
-    el.textContent = format(0);
-    const tick = (now) => {
-      const t = Math.min(1, Math.max(0, (now - start) / dur));
-      const eased = 1 - Math.pow(1 - t, 4);
-      el.textContent = format(target * eased);
-      if (t < 1) requestAnimationFrame(tick);
-    };
-    requestAnimationFrame(tick);
-  });
+async function api(path, method = 'GET', body, retry = true) {
+  const res = await fetch(cfg.apiBaseUrl + path, {method, cache:'no-store', headers:{Authorization:'Bearer ' + localStorage.getItem(TOKEN),'content-type':'application/json'}, ...(body === undefined ? {} : {body:JSON.stringify(body)})});
+  if (res.status === 401 && retry) {
+    try { await refreshAuth(); } catch { authGate('Session expired. Please sign in again.'); throw new Error('Session expired'); }
+    return api(path,method,body,false);
+  }
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) { if (res.status === 401) authGate('Please sign in again.'); throw new Error(data.error || data.message || `Request failed (${res.status})`); }
+  return data;
 }
-
-// Markup helpers shared by the page renderers
-function pageEyebrow(text, tone = '') {
-  return `<div class="page-eyebrow"><span class="dot ${tone}"></span>${text}</div>`;
+function setMode(mode) {
+  state.authMode = mode;
+  const confirm = mode === 'confirm', signup = mode === 'signup';
+  $('authTitle').textContent = confirm ? 'Confirm your email' : signup ? 'Create your account' : 'Sign in to your workspace';
+  $('authCopy').textContent = confirm ? 'Enter the code sent to your email.' : 'Your saved briefs, plans and agent activity will be available after sign-in.';
+  $('authPassword').hidden = confirm; $('authPassword').required = !confirm;
+  document.querySelector('label[for="authPassword"]').hidden = confirm;
+  $('authCodeWrap').hidden = !confirm; $('authCode').required = confirm;
+  document.querySelector('.auth-submit').textContent = confirm ? 'Confirm email' : signup ? 'Create account' : 'Sign in';
+  $('authSwitch').innerHTML = confirm ? '<button type="button" data-auth="resend">Resend code</button> · <button type="button" data-auth="signin">Back to sign in</button>' : `<button type="button" data-auth="${signup ? 'signin' : 'signup'}">${signup ? 'Already registered? Sign in' : 'Create an account'}</button> · <button type="button" data-auth="confirm">Confirm an existing account</button>`;
+  $('authError').hidden = true;
 }
-
-function cardTitle(text, iconName, tone = '') {
-  return `<div class="card-title-row">
-    <span class="title-icon ${tone}" aria-hidden="true">${icon(iconName)}</span>
-    <h2 class="card-title">${text}</h2>
-  </div>`;
+$('authForm').addEventListener('submit', async e => {
+  e.preventDefault(); const submit = document.querySelector('.auth-submit'); submit.disabled = true;
+  const username = $('authUsername').value.trim(), password = $('authPassword').value;
+  try {
+    if (state.authMode === 'signup') {
+      const data = await cognito('SignUp',{ClientId:cfg.cognitoClientId,Username:username,Password:password,UserAttributes:[{Name:'email',Value:username}]});
+      setMode(data.UserConfirmed ? 'signin' : 'confirm'); toast(data.UserConfirmed ? 'Account created. Sign in.' : 'Check your email for the confirmation code.');
+    } else if (state.authMode === 'confirm') {
+      await cognito('ConfirmSignUp',{ClientId:cfg.cognitoClientId,Username:username,ConfirmationCode:$('authCode').value.trim()}); setMode('signin'); toast('Email confirmed. You can sign in.');
+    } else {
+      const data = await cognito('InitiateAuth',{ClientId:cfg.cognitoClientId,AuthFlow:'USER_PASSWORD_AUTH',AuthParameters:{USERNAME:username,PASSWORD:password}});
+      if (!data.AuthenticationResult) throw new Error('Account requires an additional sign-in challenge: ' + data.ChallengeName);
+      saveTokens(data.AuthenticationResult); $('authPassword').value = ''; await loadWorkspace();
+    }
+  } catch (err) { $('authError').textContent = err.message; $('authError').hidden = false; }
+  finally { submit.disabled = false; }
+});
+async function loadWorkspace() {
+  $('authGate').hidden = true; $('appShell').hidden = false;
+  if (!state.workspace) $('main').innerHTML = '<div class="content-wrap"><p role="status">Loading your saved workspace…</p></div>';
+  try {
+    state.workspace = await api('/workspace'); state.error = '';
+    // The workspace endpoint intentionally returns lightweight run rows. Load the
+    // persisted run details as well so dashboard history and charts reflect every
+    // completed cycle in this account, not just the selected one.
+    const details = await Promise.all(state.workspace.runs.map(r => api('/runs/' + encodeURIComponent(r.run_id)).catch(() => r)));
+    state.workspace.runs = details;
+    const selected = localStorage.getItem(selectionKey());
+    state.run = state.workspace.runs.find(r => r.run_id === selected) || state.workspace.runs[0] || null;
+    render(); schedule();
+  } catch (err) { state.error = err.message; render(); }
 }
-
-// Markup helper: a number that counts up on view entry
-function countUp(value, prefix = '', suffix = '') {
-  return `<span class="count" data-count="${value}" data-prefix="${prefix}" data-suffix="${suffix}">${prefix}${Number(value).toLocaleString('en-US')}${suffix}</span>`;
+function schedule() {
+  clearTimeout(state.timer);
+  if (state.workspace?.runs.some(active)) state.timer = setTimeout(poll, 2000);
 }
-
-function icon(name, cls = '') {
-  return `<svg class="${cls}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICON_PATHS[name]}</svg>`;
+async function poll() {
+  try {
+    const running = state.workspace.runs.filter(active);
+    let changed = Boolean(state.error);
+    for (const old of running) {
+      const fresh = await api('/runs/' + encodeURIComponent(old.run_id));
+      changed = changed || old.updated_at !== fresh.updated_at || old.status !== fresh.status;
+      state.workspace.runs = state.workspace.runs.map(r => r.run_id === fresh.run_id ? fresh : r);
+      if (state.run?.run_id === fresh.run_id) state.run = fresh;
+    }
+    state.error = '';
+    // Updating run telemetry must never erase an in-progress founder brief or rejection note.
+    if (changed && state.view !== 'brief' && !state.busy && !document.querySelector('#revisionForm:focus-within')) render();
+    else sidebar();
+    schedule();
+  } catch (err) {
+    state.error = 'Updates interrupted: ' + err.message;
+    const banner = $('syncError'); if (banner) { banner.textContent = state.error; banner.hidden = false; }
+    if (!$('appShell').hidden) state.timer = setTimeout(poll,5000);
+  }
 }
-
-function badge(verdict) {
-  const cls = {
-    'SCALE': 'badge-scale',
-    'HOLD': 'badge-hold',
-    'CUT': 'badge-cut',
-    'INSUFFICIENT DATA': 'badge-insufficient',
-  }[verdict];
-  return `<span class="badge ${cls}">${verdict}</span>`;
+function sidebar() {
+  const w = state.workspace, run = state.run;
+  document.querySelector('.brand-sub').textContent = w?.brief?.startup_name || 'Your workspace';
+  const awaiting = w?.runs.filter(r => r.status === 'WAITING_APPROVAL').length || 0;
+  $('navBadge').textContent = awaiting; $('navBadge').hidden = !awaiting; $('navBadge').setAttribute('aria-label',`${awaiting} plans awaiting approval`);
+  document.querySelector('.footer-loop-val').textContent = run ? String(run.cycle_id) : '—';
+  document.querySelector('.footer-progress').hidden = true;
+  document.querySelector('.footer-cycle').textContent = run ? pretty(run.status) : 'No cycles yet';
+  document.querySelectorAll('[data-view]').forEach(a => { a.classList.toggle('active',a.dataset.view === state.view); a.setAttribute('aria-current',a.dataset.view === state.view ? 'page' : 'false'); });
 }
-
-function showToast(msg) {
-  const t = document.getElementById('toast');
-  t.textContent = msg;
-  t.classList.add('show');
-  clearTimeout(showToast._timer);
-  showToast._timer = setTimeout(() => t.classList.remove('show'), 2600);
+function header(title, copy) {
+  return `<header class="page-head"><div class="card-label">${esc(state.workspace?.brief?.startup_name || 'Your workspace')}</div><h1 class="page-title">${esc(title)}</h1><p>${esc(copy)}</p></header>`;
 }
-
-function proposedTotal() {
-  return Object.values(state.spends).reduce((a, b) => a + (Number(b) || 0), 0);
+function runPicker() {
+  const runs = state.workspace?.runs || [];
+  return runs.length ? `<div class="workspace-toolbar"><label for="runPicker">Cycle history</label><select id="runPicker">${runs.map(r => `<option value="${esc(r.run_id)}" ${state.run?.run_id === r.run_id ? 'selected' : ''}>Cycle ${r.cycle_id} · ${esc(pretty(r.status))} · ${esc(when(r.created_at))}</option>`).join('')}</select></div>` : '';
 }
-
-// ---------- Views ----------
+function statusCard() {
+  const r = state.run; if (!r) return '<section class="card"><h2>No cycles yet</h2><p>Save your founder brief and start your first planning cycle.</p><a href="#brief">Open Founder Brief</a></section>';
+  return `<section class="card live-status" aria-live="polite"><div><span class="badge">Cycle ${r.cycle_id} · ${esc(pretty(r.status))}</span><p>${r.current_node ? esc(pretty(r.current_node)) + ' is working…' : r.status === 'WAITING_APPROVAL' ? 'Review the generated plan and content before approving.' : r.status === 'COMPLETE' ? 'Results and learnings are saved.' : 'Latest saved workflow state'}</p></div><div><span>${r.events.length} events</span><small>Updated ${esc(when(r.updated_at))}</small></div>${r.error ? `<p class="workspace-error" role="alert">${esc(r.error)}</p>` : ''}</section>`;
+}
+function helpLabel(label, help='') { return `${esc(label)}${help ? ` <span class="field-help" tabindex="0" role="img" aria-label="${esc(help)}" data-tooltip="${esc(help)}">?</span>` : ''}`; }
+function field(name, label, value, type='text', extra='', help='') { return `<label class="workspace-field">${helpLabel(label,help)}<input name="${name}" type="${type}" value="${esc(value)}" required spellcheck="false" ${extra}></label>`; }
+function select(name,label,values,value,help='') { return `<label class="workspace-field">${helpLabel(label,help)}<select name="${name}">${values.map(v => `<option value="${v}" ${v===value?'selected':''}>${esc(pretty(v))}</option>`).join('')}</select></label>`; }
 function renderBrief() {
-  const chip = (name, kind) => `
-    <span class="chip ${kind === 'excluded' ? 'chip-excluded' : 'chip-preferred'}">
-      ${icon(kind === 'excluded' ? 'lock' : 'star', 'chip-icon')} ${esc(name)}
-      <button class="chip-x" type="button" data-remove-chip="${kind}" data-name="${esc(name)}" aria-label="Remove ${esc(name)}">${icon('x')}</button>
-    </span>`;
-
-  return `
-  <div class="content-wrap">
-    <header class="page-head">
-      ${pageEyebrow('Step 1 · Brief')}
-      <h1 class="page-title">Founder Brief</h1>
-      <p class="page-sub">This brief guides every decision the agent makes. Update it anytime.</p>
-    </header>
-
-    <section class="card card-accent">
-      ${cardTitle('Product &amp; Buyer', 'fileText')}
-      <div class="form-field">
-        <div class="form-grid-2">
-          <div>
-            <label class="field-label" for="productName">Product Name</label>
-            <input type="text" id="productName" value="LedgerAI" />
-          </div>
-          <div>
-            <label class="field-label" for="stage">Stage</label>
-            <select id="stage">
-              <option>Idea / pre-launch</option>
-              <option selected>Early traction (0–100 customers)</option>
-              <option>Growth (100+ customers)</option>
-            </select>
-          </div>
-        </div>
-      </div>
-      <div class="form-field">
-        <label class="field-label" for="icp">Ideal Customer Profile</label>
-        <textarea id="icp">Small business owners and accountants at companies with 1–20 employees in Singapore who manage bookkeeping manually or with legacy software.</textarea>
-      </div>
-      <div class="form-field">
-        <label class="field-label" for="cvp">Core Value Proposition</label>
-        <textarea id="cvp">LedgerAI automates bank reconciliation and month-end close for small businesses — cutting close time from 3 days to 3 hours.</textarea>
-      </div>
-    </section>
-
-    <section class="card section-gap">
-      ${cardTitle('Monthly Budget', 'wallet', 'navy')}
-      <div class="budget-panel">
-        <div class="budget-row">
-          <span class="budget-currency">S$</span>
-          <input type="number" id="budget" value="2000" />
-          <span class="budget-hint">/ month. The agent will not exceed this total.</span>
-        </div>
-      </div>
-    </section>
-
-    <section class="card section-gap">
-      ${cardTitle('Goal &amp; Target', 'target', 'blue')}
-      <div class="goal-grid" style="margin-top: 18px;">
-        <div class="goal-outcome">
-          <label class="field-label" for="outcome">Primary Outcome</label>
-          <select id="outcome">
-            <option selected>Free trial signups</option>
-            <option>Demo bookings</option>
-            <option>Paid conversions</option>
-          </select>
-        </div>
-        <div>
-          <label class="field-label" for="targetCac">Target Cost Per Signup</label>
-          <div class="goal-cac">
-            <span class="budget-currency">S$</span>
-            <input type="number" id="targetCac" value="120" />
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <section class="card section-gap">
-      ${cardTitle('Hard Exclusions', 'lock', 'orange')}
-      <p class="card-desc">The agent will never propose budget for these channels.</p>
-      <div class="chip-row">${state.exclusions.map((n) => chip(n, 'excluded')).join('')}</div>
-      <div class="chip-add-row">
-        <input type="text" id="addExclusion" placeholder="Add channel..." />
-        <button class="btn btn-ghost btn-add" type="button" data-add-chip="excluded">${icon('plus')}Add</button>
-      </div>
-    </section>
-
-    <section class="card section-gap">
-      ${cardTitle('Soft Preferences', 'star', 'light')}
-      <p class="card-desc">Protected for 2 cycles, then must earn its budget on results.</p>
-      <div class="chip-row">${state.preferences.map((n) => chip(n, 'preferred')).join('')}</div>
-      <div class="chip-add-row">
-        <input type="text" id="addPreference" placeholder="Add preferred channel..." />
-        <button class="btn btn-ghost btn-add" type="button" data-add-chip="preferred">${icon('plus')}Add</button>
-      </div>
-    </section>
-
-    <div class="brief-actions">
-      <button class="btn btn-primary" data-action="save-brief">Save Brief</button>
-    </div>
-  </div>`;
+  const b = state.workspace.brief || {}, p = state.workspace.profile || {}, g = b.primary_goal || {};
+  return `<div class="content-wrap"><header class="page-head"><div class="page-eyebrow"><span class="dot"></span>Step 1 · Brief</div><h1 class="page-title">Founder Brief</h1><p class="page-sub">This brief guides every decision the agents make. Update it before starting a new cycle.</p></header><form id="briefForm" class="workspace-form"><section class="card card-accent"><div class="card-title-row"><span class="title-icon">${icon('users')}</span><h2 class="card-title">Startup</h2></div><div class="workspace-grid">
+    ${field('startup_name','Company name',b.startup_name || '', 'text', '', 'The startup or company running this marketing experiment.')}
+    ${select('stage','Stage',['PRE_SEED','SEED','SERIES_A'],p.stage,'The company’s business maturity: Pre-seed is idea validation, Seed is early traction, and Series A is scaling.')}
+    ${select('sector','Sector',['B2B_SAAS','B2C_SUBSCRIPTION','MARKETPLACE','DEVTOOLS'],p.sector,'The broad business model used to guide relevant marketing assumptions and benchmarks.')}
+    ${field('target_acv','Annual customer value (S$)',p.target_acv || '', 'number','min="0.01" step="0.01"','The expected revenue from one customer in a year.')}
+    ${field('sales_cycle_days','Typical sales cycle (days)',p.sales_cycle_days || '', 'number','min="1" step="1"','The usual number of days from first contact to becoming a customer.')}
+    ${field('total_budget','Budget per simulation cycle (S$)',b.total_budget || '', 'number','min="100" step="0.01"','The total marketing budget the Strategist can allocate in this cycle.')}
+    ${select('goal_type','Outcome type',['DEMO_BOOKINGS','PAID_CONVERSIONS','LEAD_SIGNUPS','WAITLIST_SIGNUPS'],g.goal_type,'The result the agents should optimise for in this cycle.')}
+    ${field('metric_name','Outcome name',g.metric_name || '', 'text', '', 'The plain-language name for the outcome, such as Qualified Demo Bookings.')}
+    ${field('target_cac','Target cost per outcome (S$)',g.target_cac || '', 'number','min="0.01" step="0.01"','The maximum amount you want to spend to generate one outcome. CAC means cost per acquisition or outcome.')}
+    ${field('minimum_acceptable_volume','Minimum outcomes per cycle',g.minimum_acceptable_volume || '', 'number','min="1" step="1"','The minimum number of outcomes needed for the cycle to be useful.')}
+    </div><label class="workspace-field">Product, target audience and value proposition<textarea name="one_line_pitch" required spellcheck="false" rows="4">${esc(b.one_line_pitch || '')}</textarea></label></section><section class="card section-gap"><div class="card-title-row"><span class="title-icon navy">${icon('wallet')}</span><h2 class="card-title">Budget and goal</h2></div><p class="card-desc">Every proposed plan must respect this budget and target before it reaches the human approval gate.</p><div class="budget-panel"><strong>${money(b.total_budget || 0)}</strong><span>available per simulation cycle</span></div></section><section class="card section-gap"><div class="card-title-row"><span class="title-icon orange">${icon('target')}</span><h2 class="card-title">Channel boundaries and preferences</h2></div><p class="card-desc">Exclusions are hard rules. Preferences are beliefs the Strategist tests against evidence.</p><div class="brief-channel-grid">
+    ${channels.map(ch => { const ex = (b.hard_exclusions || []).find(e=>e.channel===ch), pref = (b.soft_preferences || []).find(e=>e.channel===ch); return `<fieldset class="channel-input"><legend>${labels[ch]}</legend><label><input type="checkbox" name="exclude_${ch}" ${ex?'checked':''}> Exclude this channel</label><label class="workspace-field">Exclusion reason<input name="reason_${ch}" value="${esc(ex?.reason || '')}" spellcheck="false"></label><label class="workspace-field">Founder preference<input name="note_${ch}" value="${esc(pref?.founder_note || '')}" spellcheck="false" placeholder="Optional"></label><label class="workspace-field">Belief strength (0–1)<input type="number" name="strength_${ch}" min="0" max="1" step="0.1" value="${pref?.prior_belief_strength ?? 0.5}"></label></fieldset>`; }).join('')}</div><p class="workspace-notice">Agents use ${esc(state.workspace.model_mode)}. Campaign outcomes are generated by the market simulator; no ads are published or charged.</p></section><div id="briefMessage" role="status"></div><div class="brief-actions workspace-actions"><button class="btn btn-primary" type="submit" ${state.busy?'disabled':''}>Save founder brief</button>${button('start','Save and start planning',state.busy || state.workspace.runs.some(active))}</div></form></div>`;
 }
-
-// Compact area chart in the hero band: blended CAC per completed cycle
-function renderHeroChart() {
-  const vals = [182, 105, 71, 71];
-  const W = 320, H = 118, padL = 14, padR = 14, padT = 18, padB = 24;
-  const plotW = W - padL - padR, plotH = H - padT - padB;
-  const maxY = 220;
-  const baseY = padT + plotH;
-  const x = (i) => padL + (plotW / (vals.length - 1)) * i;
-  const y = (v) => padT + plotH - (v / maxY) * plotH;
-  const line = vals.map((v, i) => `${i ? 'L' : 'M'}${x(i)},${y(v)}`).join(' ');
-  const area = `${line} L${x(vals.length - 1)},${baseY} L${x(0)},${baseY} Z`;
-  const last = vals.length - 1;
-
-  return `
-  <svg class="hero-spark" viewBox="0 0 ${W} ${H}" width="100%" role="img"
-       aria-label="Blended cost per signup fell from S$182 in Cycle 1 to S$71 in Cycle 4">
-    <defs>
-      <linearGradient id="heroArea" x1="0" y1="0" x2="0" y2="1">
-        <stop offset="0" stop-color="#68DAF8" stop-opacity="0.5"/>
-        <stop offset="1" stop-color="#68DAF8" stop-opacity="0"/>
-      </linearGradient>
-    </defs>
-    <line x1="${padL}" x2="${W - padR}" y1="${y(120)}" y2="${y(120)}" stroke="rgba(255,255,255,0.28)" stroke-width="1" stroke-dasharray="4 5"/>
-    <text x="${W - padR}" y="${y(120) - 6}" text-anchor="end" font-size="10" font-weight="600" fill="rgba(255,255,255,0.5)">S$120 TARGET</text>
-    <path class="chart-area" d="${area}" fill="url(#heroArea)"/>
-    <path class="chart-line" pathLength="1" d="${line}" fill="none" stroke="#68DAF8" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-    ${vals.map((v, i) => `
-      ${i === last ? `<circle class="chart-pt" style="--i:${i}" cx="${x(i)}" cy="${y(v)}" r="11" fill="rgba(104,218,248,0.18)"/>` : ''}
-      <circle class="chart-pt" style="--i:${i}" cx="${x(i)}" cy="${y(v)}" r="${i === last ? 5 : 3.5}" fill="#1F2A38" stroke="#68DAF8" stroke-width="2"/>
-      <text x="${x(i)}" y="${H - 6}" text-anchor="middle" font-size="10.5" font-weight="600" fill="rgba(255,255,255,0.45)">C${i + 1}</text>`).join('')}
-  </svg>`;
-}
-
-function renderDashboard() {
-  const status = state.planStatus;
-  const pending = status === 'pending';
-
-  // The stepper follows the plan's status so the page stays truthful after approve / reject
-  const stepCls = {
-    pending:  ['done', 'done', 'current', '', ''],
-    approved: ['done', 'done', 'done', 'current', ''],
-    rejected: ['done', 'current', '', '', ''],
-  }[status];
-  const steps = ['Brief', 'Plan', 'Approve', 'Launch & Measure', 'Reflect']
-    .map((name, i) => ({ n: i + 1, name, cls: stepCls[i] }));
-
-  const pill = {
-    pending:  { cls: 'orange', icon: 'clock',  text: 'Step 3 · Approve — waiting on you' },
-    approved: { cls: 'teal',   icon: 'rocket', text: 'Cycle 5 approved — launching channels' },
-    rejected: { cls: 'grey',   icon: 'pause',  text: 'Plan rejected — agent drafting a revision' },
-  }[status];
-
-  const alloc = [
-    { name: 'Google Search', amount: 900, color: '#4B98A7' },
-    { name: 'Founder Content', amount: 600, color: '#8DDCF0' },
-    { name: 'LinkedIn Ads', amount: 500, color: '#A9C8F2' },
-  ];
-
-  const kpis = [
-    { cls: 'kpi-teal',   icon: 'users',  label: 'Signups this cycle', value: 28,   delta: '+7 vs Cycle 3', up: true },
-    { cls: 'kpi-blue',   icon: 'target', label: 'Blended CAC',        value: 71,   prefix: 'S$', delta: '41% under the S$120 target', up: true },
-    { cls: 'kpi-navy',   icon: 'wallet', label: 'Spent so far',       value: 1467, prefix: 'S$', delta: '73% of budget · day 22 of 30' },
-    { cls: 'kpi-orange', icon: 'clock',  label: 'Waiting on you',     value: pending ? 1 : 0,
-      delta: pending ? 'Cycle 5 plan · S$2,000 proposed' : 'Nothing needs your decision', link: pending },
-  ];
-
-  const verdicts = [
-    { channel: 'Google Search',   verdict: 'SCALE',             confidence: 87, observed: 45,  obsTone: 'teal',   target: 120, note: 'Beating target by 2.6× — scaling up next cycle' },
-    { channel: 'Founder Content', verdict: 'HOLD',              confidence: 54, observed: 100, obsTone: 'teal',   target: 120, note: 'CAC halved since Cycle 1 — protected one more cycle' },
-    { channel: 'LinkedIn Ads',    verdict: 'INSUFFICIENT DATA', confidence: 31, observed: 250, obsTone: 'orange', target: 120, note: 'Only 8 of 30 days observed — verdict pending' },
-  ];
-
-  return `
-  <div class="content-wrap">
-    <section class="hero" aria-labelledby="dashTitle">
-      <div class="hero-top">
-        <div>
-          <div class="hero-eyebrow"><span class="dot"></span>Cycle 4 of 12 · Budget month 4</div>
-          <h1 class="page-title hero-title" id="dashTitle">Dashboard</h1>
-          <p class="hero-sub">Where the budget sits, what each channel earned, and what needs you next.</p>
-        </div>
-        <span class="hero-pill ${pill.cls}">${icon(pill.icon)}${pill.text}</span>
-      </div>
-
-      <div class="hero-body">
-        <div class="hero-money">
-          <div class="hero-money-label">Monthly budget under management</div>
-          <div class="hero-money-value">
-            <span class="cur">S$</span>${countUp(2000)}<span class="per">/ month</span>
-          </div>
-          <div class="hero-money-meta">
-            <span>Allocated across <strong>3 channels</strong></span>
-            <span class="sep"></span>
-            <span><strong>100%</strong> deployed this cycle</span>
-            <span class="sep"></span>
-            <span>Cycle 5 proposal <strong>${pending ? 'awaiting approval' : status}</strong></span>
-          </div>
-        </div>
-
-        <div class="hero-chart">
-          <div class="hero-chart-head">
-            <div>
-              <div class="hero-chart-label">Blended CAC</div>
-              <div class="hero-chart-value">${countUp(71, 'S$')}</div>
-            </div>
-            <span class="hero-chart-delta">${icon('trendDown')}61% since Cycle 1</span>
-          </div>
-          ${renderHeroChart()}
-        </div>
-      </div>
-    </section>
-
-    <div class="kpi-row">
-      ${kpis.map((k, i) => `
-        <div class="kpi ${k.cls}" style="--i:${i}">
-          <div class="kpi-head">
-            <div class="kpi-label">${k.label}</div>
-            <div class="kpi-icon" aria-hidden="true">${icon(k.icon)}</div>
-          </div>
-          <div class="kpi-value">${countUp(k.value, k.prefix || '')}</div>
-          <div class="kpi-delta ${k.up ? 'up' : ''}">${k.up ? icon('trendUp') : ''}${k.delta}</div>
-          ${k.link ? `<button class="kpi-link" type="button" data-goto="approval">Review plan ${icon('arrowRight')}</button>` : ''}
-        </div>`).join('')}
-    </div>
-
-    <section class="card cycle-card">
-      <div class="cycle-head">
-        <div class="cycle-title">Cycle 4 of 12</div>
-        <div class="card-label">Current Status</div>
-      </div>
-      <div class="stepper" aria-label="Cycle progress">
-        ${steps.map((s, i) => `
-          ${i > 0 ? `<div class="step-connector ${s.cls === 'done' || s.cls === 'current' ? 'done' : ''}"></div>` : ''}
-          <div class="step ${s.cls}" ${s.cls === 'current' ? 'aria-current="step"' : ''}>
-            <div class="step-num">${s.cls === 'done' ? icon('check') : s.n}</div>
-            <div class="step-name">${s.name}</div>
-          </div>`).join('')}
-      </div>
-    </section>
-
-    <div class="dash-grid">
-      <section class="card">
-        <div class="cycle-head alloc-head-row">
-          <div class="card-label">Allocation — Cycle 4</div>
-          <div class="alloc-deployed">${fmt(2000)} deployed</div>
-        </div>
-        <div class="alloc-bar" role="img" aria-label="Budget split: Google Search S$900, Founder Content S$600, LinkedIn Ads S$500">
-          ${alloc.map((a, i) => `<span style="--i:${i};width:${(a.amount / 2000) * 100}%;background:${a.color}"></span>`).join('')}
-        </div>
-        ${alloc.map((a) => `
-          <div class="legend-row">
-            <div class="legend-left"><span class="legend-swatch" style="background:${a.color}"></span>${a.name}</div>
-            <div class="legend-amount">${countUp(a.amount, 'S$')}</div>
-          </div>`).join('')}
-        <hr class="dash-divider" />
-        <div class="card-label">Explore / Exploit Split</div>
-        <div class="split-bar">
-          <span style="width:70%;background:#4B98A7"></span>
-          <span style="width:30%;background:#8DDCF0"></span>
-        </div>
-        <div class="split-caption">
-          <span class="proven">70% proven channels</span>
-          <span class="exploring">30% exploring</span>
-        </div>
-      </section>
-
-      <section class="card verdict-card">
-        <span class="orb orb-1" aria-hidden="true"></span>
-        <span class="orb orb-2" aria-hidden="true"></span>
-        <span class="orb orb-3" aria-hidden="true"></span>
-        <div class="cycle-head verdict-head">
-          <div class="card-label">Latest Verdicts — Cycle 4</div>
-          <div class="verdict-meta">3 channels · day 22 of 30</div>
-        </div>
-        ${verdicts.map((v, i) => `
-          <div class="verdict-tile" style="--i:${i}">
-            <div class="verdict-tile-head">
-              <div class="verdict-channel">${v.channel}</div>
-              ${badge(v.verdict)}
-            </div>
-            <div class="verdict-stats">
-              <div class="stat">
-                <div class="stat-label">Confidence</div>
-                <div class="stat-value">${countUp(v.confidence, '', '%')}</div>
-              </div>
-              <div class="stat">
-                <div class="stat-label">Observed CAC</div>
-                <div class="stat-value ${v.obsTone}">${countUp(v.observed, 'S$')}</div>
-              </div>
-              <div class="stat">
-                <div class="stat-label">Target CAC</div>
-                <div class="stat-value">${fmt(v.target)}</div>
-              </div>
-            </div>
-            <div class="verdict-conf ${v.obsTone === 'orange' ? 'orange' : ''}" role="progressbar"
-                 aria-valuemin="0" aria-valuemax="100" aria-valuenow="${v.confidence}" aria-label="Confidence ${v.confidence}%">
-              <span style="width:${v.confidence}%"></span>
-            </div>
-            <div class="verdict-note">${v.note}</div>
-          </div>`).join('')}
-      </section>
-    </div>
-
-    ${pending ? `
-    <section class="approval-banner">
-      <div class="banner-icon">${icon('clock')}</div>
-      <div class="banner-body">
-        <div class="banner-title">Plan for Cycle 5 is awaiting your approval</div>
-        <div class="banner-sub">The agent has proposed a new allocation. Review before anything runs.</div>
-      </div>
-      <button class="btn btn-human" type="button" data-goto="approval">Review Plan ${icon('arrowRight')}</button>
-    </section>` : ''}
-  </div>`;
-}
-
-function renderApproval() {
-  const total = proposedTotal();
-  const totalOk = total === BUDGET;
-
-  const planRows = PLAN_ROWS.map((row) => {
-    const current = CURRENT_SPEND[row.channel];
-    const proposed = Number(state.spends[row.channel]) || 0;
-    const changeCls = proposed >= current ? 'change-up' : 'change-down';
-    const changeText = fmtDelta(proposed, current);
-    const expanded = !!state.expandedRows[row.channel];
-
-    const spendCell = state.editMode
-      ? `<div class="spend-input-wrap">
-           <span class="cur">S$</span>
-           <input type="number" step="50" value="${proposed}" data-spend-input="${row.channel}" />
-         </div>`
-      : `<span class="cell-proposed">${fmt(proposed)}</span>`;
-
-    const detailRow = expanded
-      ? `<tr class="row-expanded"><td colspan="5">
-           <dl class="expand-detail">
-             <dt>Hypothesis</dt><dd>${row.detail.hypothesis}</dd>
-             <dt>Audience</dt><dd>${row.detail.audience}</dd>
-             <dt>Message angle</dt><dd>${row.detail.angle}</dd>
-             <dt>Success threshold</dt><dd>${row.detail.threshold}</dd>
-             <dt>Evaluation window</dt><dd>${row.detail.window}</dd>
-           </dl>
-         </td></tr>`
-      : '';
-
-    return `
-      <tr>
-        <td>
-          <div class="cell-channel">${row.channel}</div>
-          <button class="expand-toggle" type="button" data-expand="${row.channel}" aria-expanded="${expanded}">
-            ${icon('chevronDown')} ${expanded ? 'Hide details' : 'Show details'}
-          </button>
-        </td>
-        <td class="num">${fmt(current)}</td>
-        <td>${spendCell}</td>
-        <td class="cell-change"><span class="change-pill ${changeCls}">${changeText}</span></td>
-        <td class="cell-reason">${row.reason}</td>
-      </tr>
-      ${detailRow}`;
-  }).join('');
-
-  const totalIndicator = state.editMode
-    ? `<div class="alloc-total ${totalOk ? 'ok' : 'bad'}">
-         Total: ${fmt(total)} ${totalOk ? '✓' : `— must equal ${fmt(BUDGET)}`}
-       </div>`
-    : '';
-
-  // Plan-at-a-glance tiles and a current-vs-proposed allocation comparison
-  const biggest = PLAN_ROWS
-    .map((r) => ({ channel: r.channel, delta: (Number(state.spends[r.channel]) || 0) - CURRENT_SPEND[r.channel] }))
-    .sort((a, b) => Math.abs(b.delta) - Math.abs(a.delta))[0];
-  const scaling = PLAN_ROWS.filter((r) => (Number(state.spends[r.channel]) || 0) > CURRENT_SPEND[r.channel]).length;
-  const planStrip = `
-    <div class="kpi-strip plan-strip">
-      <div class="kpi ${totalOk ? 'kpi-teal' : 'kpi-orange'}" style="--i:0">
-        <div class="kpi-head"><div class="kpi-label">Proposed total</div><div class="kpi-icon" aria-hidden="true">${icon('wallet')}</div></div>
-        <div class="kpi-value" data-plan-total>${countUp(total, 'S$')}</div>
-        <div class="kpi-delta ${totalOk ? 'up' : ''}" data-plan-total-note>${totalOk ? icon('check') + 'Matches the ' + fmt(BUDGET) + ' budget' : 'Must equal ' + fmt(BUDGET)}</div>
-      </div>
-      <div class="kpi kpi-blue" style="--i:1">
-        <div class="kpi-head"><div class="kpi-label">Biggest move</div><div class="kpi-icon" aria-hidden="true">${icon(biggest.delta >= 0 ? 'trendUp' : 'trendDown')}</div></div>
-        <div class="kpi-value">${countUp(Math.abs(biggest.delta), biggest.delta >= 0 ? '+S$' : '−S$')}</div>
-        <div class="kpi-delta">${biggest.channel}</div>
-      </div>
-      <div class="kpi kpi-navy" style="--i:2">
-        <div class="kpi-head"><div class="kpi-label">Channels scaling</div><div class="kpi-icon" aria-hidden="true">${icon('rocket')}</div></div>
-        <div class="kpi-value">${countUp(scaling)}<span class="kpi-of"> of ${PLAN_ROWS.length}</span></div>
-        <div class="kpi-delta">${PLAN_ROWS.length - scaling} held or reduced</div>
-      </div>
-    </div>`;
-
-  const allocColors = { 'Google Search': '#4B98A7', 'Founder Content': '#8DDCF0', 'LinkedIn Ads': '#A9C8F2' };
-  const compareBar = (label, source, key) => `
-    <div class="compare-row">
-      <div class="compare-label">${label}</div>
-      <div class="compare-bar" data-compare="${key}">
-        ${PLAN_ROWS.map((r) => {
-          const amt = Number(source[r.channel]) || 0;
-          return `<span data-bar-channel="${r.channel}" style="width:${(amt / BUDGET) * 100}%;background:${allocColors[r.channel]}" title="${r.channel} · ${fmt(amt)}"></span>`;
-        }).join('')}
-      </div>
-    </div>`;
-  const compareBars = `
-    <div class="compare-bars" role="img" aria-label="Current versus proposed allocation across channels">
-      ${compareBar('Current', CURRENT_SPEND, 'current')}
-      ${compareBar('Proposed', state.spends, 'proposed')}
-      <div class="compare-legend">
-        ${PLAN_ROWS.map((r) => `<span class="key"><span class="legend-swatch" style="background:${allocColors[r.channel]}"></span>${r.channel}</span>`).join('')}
-      </div>
-    </div>`;
-
-  const planTab = `
-    ${planStrip}
-    <section class="card card-tinted">
-      <div class="card-label">Strategy Summary</div>
-      <p class="strategy-text">
-        Google Search has delivered signups consistently below the S$120 CAC target and is the primary
-        scaling opportunity for Cycle 5. Founder Content is showing gradual improvement and is protected
-        for one more cycle. LinkedIn Ads has insufficient data and will be maintained at a reduced
-        exploratory budget while the evaluation window completes.
-      </p>
-      <div class="alert alert-warning">
-        ${icon('alert', 'alert-icon')}
-        <div><strong>Major uncertainties:</strong> LinkedIn Ads has only 8 days
-        of observation. The proposed CPC on Google Search assumes continued Quality Score above 7 — a drop
-        could raise CAC materially.</div>
-      </div>
-    </section>
-
-    <section class="card section-gap">
-      <div class="alloc-head">
-        <h2 class="card-title">Allocation changes</h2>
-        ${totalIndicator}
-      </div>
-      ${state.validationError ? `<div class="alert alert-error" role="alert">${icon('alert', 'alert-icon')}<div>${state.validationError}</div></div>` : ''}
-      ${compareBars}
-      <div class="table-scroll">
-        <table class="table">
-          <thead>
-            <tr>
-              <th>Channel</th>
-              <th>Current Spend</th>
-              <th>Proposed Spend</th>
-              <th>Change</th>
-              <th>Reason</th>
-            </tr>
-          </thead>
-          <tbody>${planRows}</tbody>
-        </table>
-      </div>
-      ${state.editMode ? '<div class="table-footnote">Edits are re-checked against your budget rules before anything runs.</div>' : ''}
-    </section>
-
-    <div class="action-bar">
-      <span class="action-note">Nothing runs until you approve. You can edit individual line items before approving.</span>
-      <div class="action-buttons">
-        <button class="btn btn-ghost" type="button" data-action="reject">Reject</button>
-        ${state.editMode
-          ? '<button class="btn btn-secondary" type="button" data-action="save-edits">Save edits</button>'
-          : '<button class="btn btn-secondary" type="button" data-action="edit">Edit</button>'}
-        <button class="btn btn-human" type="button" data-action="approve" ${state.editMode && !totalOk ? 'disabled' : ''}>Approve Cycle 5 ${icon('arrowRight')}</button>
-      </div>
-    </div>`;
-
-  const draftTones = ['', 'blue', 'light'];
-  const draftsTab = `
-    <div class="drafts-banner">
-      <span class="title-icon blue" aria-hidden="true">${icon('fileText')}</span>
-      <div>These drafts belong to <strong>Cycle 5 plan (awaiting approval)</strong>. Nothing is published until the plan is approved.</div>
-      <span class="drafts-count">${DRAFTS.length} drafts · Cycle 5</span>
-    </div>
-    ${DRAFTS.map((d, i) => {
-      const id = d.channel.replace(/\s+/g, '-').toLowerCase();
-      const spend = Number(state.spends[d.channel]) || 0;
-      return `
-      <section class="card card-accent section-gap draft-card">
-        <div class="draft-head">
-          <div class="card-title-row">
-            <span class="title-icon num ${draftTones[i] || ''}" aria-hidden="true">${i + 1}</span>
-            <h2 class="card-title">${d.channel}</h2>
-          </div>
-          <div class="draft-meta">
-            <span class="draft-spend">${fmt(spend)} proposed</span>
-            <span class="badge badge-awaiting">Draft</span>
-          </div>
-        </div>
-        <div class="draft-field">
-          <label class="field-label" for="hyp-${id}">Hypothesis</label>
-          <textarea id="hyp-${id}">${d.hypothesis}</textarea>
-        </div>
-        <div class="draft-field">
-          <label class="field-label" for="aud-${id}">Audience</label>
-          <textarea id="aud-${id}">${d.audience}</textarea>
-        </div>
-        <div class="draft-field">
-          <label class="field-label" for="angle-${id}">Message angle</label>
-          <input type="text" id="angle-${id}" value="${esc(d.angle)}" data-angle-input="${id}" />
-        </div>
-        <div class="draft-preview" aria-live="polite">
-          <span class="quote-mark" aria-hidden="true">“</span>
-          <div>
-            <div class="draft-preview-label">How it reads</div>
-            <div class="draft-preview-text" data-angle-preview="${id}">${esc(d.angle)}</div>
-          </div>
-        </div>
-      </section>`;
-    }).join('')}
-    <div class="brief-actions">
-      <button class="btn btn-primary" data-action="save-drafts">Save drafts</button>
-    </div>`;
-
-  const statusBadge = {
-    pending: '<span class="badge badge-awaiting">Awaiting Your Approval</span>',
-    approved: '<span class="badge badge-approved">Approved</span>',
-    rejected: '<span class="badge badge-rejected">Rejected</span>',
-  }[state.planStatus];
-
-  return `
-  <div class="content-wrap">
-    <header class="approval-header page-head">
-      ${pageEyebrow('Step 3 · Approve', 'orange')}
-      <h1 class="page-title">Cycle 5 plan</h1>
-      ${statusBadge}
-      <p class="approval-meta">Proposed by the agent · Generated 09:07 today</p>
-    </header>
-
-    <div class="tabs" role="tablist">
-      <button class="tab ${state.approvalTab === 'plan' ? 'active' : ''}" type="button" role="tab" aria-selected="${state.approvalTab === 'plan'}" data-tab="plan">Proposed Plan</button>
-      <button class="tab ${state.approvalTab === 'drafts' ? 'active' : ''}" type="button" role="tab" aria-selected="${state.approvalTab === 'drafts'}" data-tab="drafts">Content Drafts</button>
-    </div>
-
-    ${state.approvalTab === 'plan' ? planTab : draftsTab}
-  </div>`;
-}
-
-function renderChart() {
-  // Values are direct-labelled once at the end of each line (never per point) so
-  // labels can't pile up where the series converge; exact values live in hover tooltips.
-  const W = 1080, H = 400;
-  const padL = 80, padR = 236, padT = 28, padB = 52;
-  const plotW = W - padL - padR, plotH = H - padT - padB;
-  const maxY = 500;
-  const cycles = ['Cycle 1', 'Cycle 2', 'Cycle 3', 'Cycle 4'];
-  const inset = 36;
-  const x = (i) => padL + inset + ((plotW - inset * 2) / (cycles.length - 1)) * i;
-  const y = (v) => padT + plotH - (v / maxY) * plotH;
-  const TARGET = 120;
-  const lineEndX = W - padR + 12;
-
-  const baseY = padT + plotH;
-
-  const gridVals = [100, 200, 300, 400, 500];
-  // Colours for grid, axis and labels come from CSS classes so the chart follows the theme
-  const grid = gridVals.map((v) => `
-    <line class="chart-grid" x1="${padL}" y1="${y(v)}" x2="${lineEndX}" y2="${y(v)}" stroke-width="1"/>
-    <text class="chart-label" x="${padL - 12}" y="${y(v) + 4}" text-anchor="end" font-size="13">S$${v}</text>`).join('');
-  // Faint vertical guides at each cycle
-  const vGrid = cycles.map((_, i) => `<line class="chart-vgrid" x1="${x(i)}" y1="${padT}" x2="${x(i)}" y2="${baseY}" stroke-width="1" stroke-dasharray="3 5"/>`).join('');
-
-  // One vertical gradient per series for the area fill under its line
-  const defs = `<defs>${CHART_SERIES.map((s, si) => `
-    <linearGradient id="area-${si}" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="${s.color}" stop-opacity="0.30"/>
-      <stop offset="1" stop-color="${s.color}" stop-opacity="0.02"/>
-    </linearGradient>`).join('')}</defs>`;
-
-  const band = `<rect x="${padL}" y="${y(132)}" width="${lineEndX - padL}" height="${y(108) - y(132)}" fill="rgba(0,151,167,0.08)" rx="2"/>`;
-  const targetLine = `<line x1="${padL}" y1="${y(TARGET)}" x2="${lineEndX}" y2="${y(TARGET)}" stroke="#0097A7" stroke-width="2" stroke-dasharray="7 6" stroke-linecap="round"/>`;
-
-  // End-of-line labels (one per series) plus the target label, spread apart vertically
-  const endLabels = CHART_SERIES.map((s) => {
-    let last = -1;
-    s.values.forEach((v, i) => { if (v != null) last = i; });
-    return { y: y(s.values[last]), anchorY: y(s.values[last]), text: `${s.name} · S$${s.values[last]}`, color: s.color, weight: 600 };
-  });
-  endLabels.push({ y: y(TARGET), anchorY: y(TARGET), text: `S$${TARGET} target`, color: '#0097A7', weight: 500 });
-  endLabels.sort((a, b) => a.y - b.y);
-  const GAP = 22;
-  for (let i = 1; i < endLabels.length; i++) {
-    if (endLabels[i].y - endLabels[i - 1].y < GAP) endLabels[i].y = endLabels[i - 1].y + GAP;
+function readBrief() {
+  const f = $('briefForm'); if (!f.reportValidity()) throw new Error('Complete the required founder brief fields.');
+  const d = new FormData(f), n = k => Number(d.get(k)), s = k => String(d.get(k) || '').trim();
+  const brief = {startup_name:s('startup_name'),stage:s('stage'),one_line_pitch:s('one_line_pitch'),total_budget:n('total_budget'),primary_goal:{goal_type:s('goal_type'),target_cac:n('target_cac'),minimum_acceptable_volume:n('minimum_acceptable_volume'),metric_name:s('metric_name')},initial_allocations:{},hard_exclusions:[],soft_preferences:[]};
+  for (const ch of channels) {
+    if (d.has('exclude_'+ch)) { if (!s('reason_'+ch)) throw new Error('Add an exclusion reason for '+labels[ch]); brief.hard_exclusions.push({channel:ch,reason:s('reason_'+ch),is_permanent:true}); }
+    if (s('note_'+ch)) brief.soft_preferences.push({channel:ch,prior_belief_strength:n('strength_'+ch),founder_note:s('note_'+ch)});
   }
-  // Keep the stack inside the plot: if it overflowed the bottom, shift everything up
-  const overflow = endLabels[endLabels.length - 1].y - (padT + plotH - 4);
-  if (overflow > 0) endLabels.forEach((l) => { l.y -= overflow; });
-
-  const labelX = lineEndX + 14;
-  const endLabelSvg = endLabels.map((l) => `
-    <path d="M${lineEndX},${l.anchorY} L${labelX - 6},${l.y}" stroke="${l.color}" stroke-width="1" stroke-opacity="0.45" fill="none"/>
-    <text x="${labelX}" y="${l.y + 4}" font-size="13" font-weight="${l.weight}" fill="${l.color}">${l.text}</text>`).join('');
-
-  // Lines and area fills per series; dots are drawn afterwards so they always sit on top
-  const series = CHART_SERIES.map((s, si) => {
-    // A null value (no signups → CAC undefined) breaks the line and gets no dot
-    const path = s.values.map((v, i) => {
-      if (v == null) return '';
-      const prevMissing = i === 0 || s.values[i - 1] == null;
-      return `${prevMissing ? 'M' : 'L'}${x(i)},${y(v)}`;
-    }).join(' ');
-
-    // Area fill under each contiguous run of at least two points
-    const runs = [];
-    let run = [];
-    s.values.forEach((v, i) => {
-      if (v == null) { if (run.length) runs.push(run); run = []; } else run.push(i);
-    });
-    if (run.length) runs.push(run);
-    const areas = runs.filter((r) => r.length > 1).map((r) => {
-      const top = r.map((i, k) => `${k ? 'L' : 'M'}${x(i)},${y(s.values[i])}`).join(' ');
-      return `<path class="chart-area" style="--s:${si}" d="${top} L${x(r[r.length - 1])},${baseY} L${x(r[0])},${baseY} Z" fill="url(#area-${si})"/>`;
-    }).join('');
-
-    return `${areas}<path class="chart-line" style="--s:${si}" pathLength="1" d="${path}" fill="none" stroke="${s.color}" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>`;
-  }).join('');
-
-  // One hover target per unique point. Series that share a point are merged into a single
-  // dot (filled + ring) with a combined tooltip, so neither series becomes unreachable.
-  const points = new Map();
-  CHART_SERIES.forEach((s, si) => s.values.forEach((v, i) => {
-    if (v == null) return;
-    const key = `${i}:${v}`;
-    if (!points.has(key)) points.set(key, { i, v, list: [] });
-    points.get(key).list.push({ name: s.name, color: s.color, si });
-  }));
-  const dots = [...points.values()].map(({ i, v, list }) => {
-    const [first, ...rest] = list;
-    const marks = [
-      `<circle class="chart-dot-mark chart-dot-fill" cx="${x(i)}" cy="${y(v)}" r="6.5" stroke="${first.color}" stroke-width="3"/>`,
-      ...rest.map((s, k) => `<circle class="chart-dot-mark" cx="${x(i)}" cy="${y(v)}" r="${11 + k * 4}" fill="none" stroke="${s.color}" stroke-width="2.5"/>`),
-    ].join('');
-    const rows = list.map((s) => ({ name: s.name, color: s.color, value: v }));
-    const label = `${cycles[i]}: ${list.map((s) => `${s.name} S$${v} per signup`).join('; ')}`;
-    return `
-      <g class="chart-dot" style="--i:${i};--s:${first.si}" tabindex="0" role="img"
-         aria-label="${label}" data-tip-title="${cycles[i]}" data-tip-rows='${JSON.stringify(rows)}'>
-        <circle cx="${x(i)}" cy="${y(v)}" r="${rest.length ? 17 : 14}" fill="transparent"/>
-        ${marks}
-      </g>`;
-  }).join('');
-
-  const xLabels = cycles.map((c, i) => {
-    const hasData = CHART_SERIES.some((s) => s.values[i] != null);
-    return `<text class="chart-xlabel ${hasData ? '' : 'dim'}" x="${x(i)}" y="${H - 18}" text-anchor="middle" font-size="14">${c}${hasData ? '' : ' · in progress'}</text>`;
-  }).join('');
-
-  return `
-  <svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="Cost per signup over time">
-    ${defs}${grid}${vGrid}${band}
-    <line class="chart-axis" x1="${padL}" y1="${baseY}" x2="${lineEndX}" y2="${baseY}" stroke-width="1"/>
-    ${targetLine}${series}${endLabelSvg}${dots}${xLabels}
-  </svg>
-  <div class="chart-tooltip" id="chartTooltip" role="tooltip" hidden></div>`;
+  if (brief.hard_exclusions.length > 3) throw new Error('Keep at least two channels available to satisfy the concentration limit.');
+  return {brief,profile:{stage:s('stage'),sector:s('sector'),target_acv:n('target_acv'),sales_cycle_days:n('sales_cycle_days')}};
 }
-
-function renderAnalytics() {
-  const rows = RESULTS.map((r, idx) => `
-    <tr class="${!r.complete ? 'row-incomplete' : ''} ${idx === 0 ? 'row-tint' : ''}">
-      <td class="cell-cycle">${r.cycle}</td>
-      <td class="cell-channel">${r.channel}</td>
-      <td class="num">${r.spend}</td>
-      <td class="num">${r.signups}</td>
-      <td class="num ${r.cacTone === 'good' ? 'cac-good' : r.cacTone === 'bad' ? 'cac-bad' : ''}">${r.cac}</td>
-      <td class="num">${r.cvr}</td>
-      <td class="num">${r.ctr}</td>
-      <td>${r.complete ? `<span class="days-done num">${r.days.replace(' ✓', '')}${icon('check')}</span>` : `<span class="days-chip">${r.days}</span>`}</td>
-      <td>${badge(r.verdict)}</td>
-    </tr>`).join('');
-
-  const historyRows = VERDICT_HISTORY.map((h) => `
-    <tr>
-      <td class="cell-channel">${h.channel}</td>
-      ${h.cycles.map((v) => `<td>${badge(v)}</td>`).join('')}
-    </tr>`).join('');
-
-  return `
-  <div class="content-wrap">
-    <header class="page-head">
-      ${pageEyebrow('Results · Cycles 1–4')}
-      <h1 class="page-title">Analytics</h1>
-      <p class="page-sub">Results, verdicts and cost per signup across every cycle so far.</p>
-    </header>
-
-    <div class="kpi-strip">
-      ${[
-        { cls: 'kpi-teal', icon: 'users',  label: 'Total signups',    value: 86, delta: '+28 this cycle', up: true },
-        { cls: 'kpi-blue', icon: 'target', label: 'Best CAC to date', value: 45, prefix: 'S$', delta: 'Google Search · Cycle 4', up: true },
-        { cls: 'kpi-navy', icon: 'check',  label: 'Cycles completed', value: 3,  delta: 'of 12 · Cycle 4 in progress' },
-      ].map((k, i) => `
-        <div class="kpi ${k.cls}" style="--i:${i}">
-          <div class="kpi-head">
-            <div class="kpi-label">${k.label}</div>
-            <div class="kpi-icon" aria-hidden="true">${icon(k.icon)}</div>
-          </div>
-          <div class="kpi-value">${countUp(k.value, k.prefix || '')}</div>
-          <div class="kpi-delta ${k.up ? 'up' : ''}">${k.up ? icon('trendUp') : ''}${k.delta}</div>
-        </div>`).join('')}
-    </div>
-
-    <section class="card card-accent">
-      <h2 class="card-title">Results by cycle</h2>
-      <div class="table-scroll">
-        <table class="table results-table">
-          <thead>
-            <tr>
-              <th>Cycle</th><th>Channel</th><th>Spend</th><th>Signups</th><th>CAC</th>
-              <th>CVR</th><th>CTR</th><th>Days</th><th>Verdict</th>
-            </tr>
-          </thead>
-          <tbody>${rows}</tbody>
-        </table>
-      </div>
-    </section>
-
-    <section class="card section-gap">
-      <h2 class="card-title">Verdict history</h2>
-      <div class="table-scroll">
-        <table class="table verdict-grid-table">
-          <thead>
-            <tr><th>Channel</th><th>Cycle 1</th><th>Cycle 2</th><th>Cycle 3</th><th>Cycle 4</th></tr>
-          </thead>
-          <tbody>${historyRows}</tbody>
-        </table>
-      </div>
-    </section>
-
-    <section class="card section-gap">
-      <h2 class="card-title">Cost per signup over time</h2>
-      <p class="chart-sub">Completed cycles only · Dashed line = S$120 target · Gaps = no signups recorded</p>
-      <div class="chart-wrap">${renderChart()}</div>
-      <div class="chart-legend">
-        ${CHART_SERIES.map((s) => `<span class="key"><span class="line" style="background:${s.color}"></span>${s.name}</span>`).join('')}
-        <span class="key"><span class="line dashed"></span>S$120 target</span>
-      </div>
-    </section>
-
-    <div class="analytics-bottom">
-      <section class="card">
-        <h2 class="card-title">Learnings</h2>
-        <ul class="learnings-list">
-          ${[
-            'Google Search branded terms convert 3× better than category terms for LedgerAI.',
-            'Founder Content performs best when published Tuesday–Thursday mornings.',
-            'LinkedIn Ads require ≥30 days to reach statistical significance at current budget.',
-            'Signup-to-trial conversion drops when CAC exceeds S$120 — tighten audience segments.',
-            'Re-targeting previous website visitors on Search cuts CAC by ~40%.',
-          ].map((t) => `<li><span class="arrow">${icon('trendUp')}</span><span>${t}</span></li>`).join('')}
-        </ul>
-      </section>
-
-      <div>
-        <div class="info-panel">
-          ${icon('info', 'info-icon')}
-          <span><strong>Attribution: Last-click only.</strong> Revenue from users who visited multiple times is attributed to the final channel. Multi-touch attribution is on the roadmap.</span>
-        </div>
-
-        <section class="card digest-card">
-          <h2 class="digest-title">Founder digest — Cycle 4</h2>
-          <div class="digest-week"><strong>Week ending Oct 4, 2025</strong></div>
-          <p>Google Search is your engine right now. At S$45 CAC, it's beating the target by 2.6×. We're scaling it up.</p>
-          <p>Founder Content continues to improve but slowly. CAC dropped from S$200 (Cycle 1) to S$100 this cycle. It's earning its keep — just not leading yet.</p>
-          <p>LinkedIn Ads is inconclusive. We've reduced the budget to the minimum needed to complete the evaluation window. One more cycle will tell us whether to cut it.</p>
-        </section>
-      </div>
-    </div>
-  </div>`;
+async function saveBrief(payload) {
+  const data = await api('/briefs/current','PUT',payload); state.workspace.brief=data.brief; state.workspace.profile=data.profile;
+  if ($('briefMessage')) $('briefMessage').textContent = 'Saved to your workspace at ' + new Date().toLocaleTimeString(); sidebar();
 }
-
-function renderActivity() {
-  const entries = [
-    {
-      time: '09:02', dot: '', cardCls: '',
-      chips: '<span class="node-chip">load_context</span>',
-      summary: 'Loaded Cycle 3 results, founder brief, and budget ledger.',
-    },
-    {
-      time: '09:02', dot: 'teal', cardCls: 'tl-active',
-      chips: '<span class="node-chip">strategist</span>',
-      summary: 'Analysing performance data for 3 channels across 22-day window.',
-    },
-    {
-      time: '09:04', dot: '', cardCls: '',
-      chips: '<span class="node-chip">strategist</span>',
-      summary: 'Generating Cycle 5 allocation proposal. Confidence: 87% on Google Search.',
-    },
-    {
-      time: '09:06', dot: '', cardCls: '',
-      chips: '<span class="node-chip">ledger</span><span class="repair-chip">Self-repair attempt 1 of 3</span>',
-      summary: 'Budget validation passed. Total proposed: S$2,000.00.',
-    },
-    {
-      time: '09:07', dot: 'orange', cardCls: 'tl-gate',
-      chips: `<span class="node-chip">approval_gate</span><span class="gate-chip">${icon('pause')}Waiting for Founder Approval</span>`,
-      summary: 'Plan submitted. Waiting for founder approval.',
-      link: `<a href="#approval" class="tl-link">Go to approval screen ${icon('arrowRight')}</a>`,
-    },
-  ];
-
-  const reasoning = [
-    'Loading Cycle 3 data...',
-    '',
-    'Google Search',
-    '  CAC: S$61 (target S$120)',
-    '  Confidence: 87%',
-    '  → SCALE eligible',
-    '',
-    'Founder Content',
-    '  CAC: S$100 (target S$120)',
-    '  Confidence: 54%',
-    '  → HOLD — improving',
-    '',
-    'LinkedIn Ads',
-    '  Days observed: 8',
-    '  → INSUFFICIENT DATA',
-    '  → Maintain minimum budget',
-    '',
-    'Proposing: GS +S$300, FC −S$100, LI −S$200...',
-  ].join('\n');
-
-  return `
-  <div class="content-wrap">
-    <header class="page-head">
-      ${pageEyebrow('Live · Cycle 5 planning run', 'live')}
-      <h1 class="page-title">Agent Activity</h1>
-      <p class="page-sub">Read-only event stream for Cycle 5 planning run.</p>
-    </header>
-
-    <div class="activity-layout">
-      <div class="timeline">
-        ${entries.map((e) => `
-          <div class="timeline-entry">
-            <div class="tl-time">${e.time}</div>
-            <div class="tl-rail">
-              <span class="tl-dot ${e.dot}"></span>
-              <span class="tl-line"></span>
-            </div>
-            <div class="tl-card ${e.cardCls}">
-              <div class="tl-chips">${e.chips}</div>
-              <div class="tl-summary">${e.summary}</div>
-              ${e.link || ''}
-            </div>
-          </div>`).join('')}
-      </div>
-
-      <aside class="card reasoning-panel">
-        <div class="card-label">Strategist Reasoning</div>
-        <div class="reasoning-body">${reasoning}</div>
-      </aside>
-    </div>
-  </div>`;
+function planCard() {
+  const p = state.run?.result?.plan; if (!p) return '<section class="card"><p>No generated plan is available yet. Agent Activity shows current progress.</p></section>';
+  const allocations=p.allocations||[], total=allocations.reduce((s,a)=>s+Number(a.proposed_budget||0),0), scaling=allocations.filter(a=>Number(a.proposed_budget)>Number(a.current_budget)).length;
+  return `<div class="kpi-strip plan-strip"><div class="kpi kpi-teal"><div class="kpi-head"><div class="kpi-label">Proposed total</div><div class="kpi-icon">${icon('wallet')}</div></div><div class="kpi-value">${money(total)}</div><div class="kpi-delta">Matches ${money(p.total_budget)} budget</div></div><div class="kpi kpi-blue"><div class="kpi-head"><div class="kpi-label">Explore budget</div><div class="kpi-icon">${icon('trendUp')}</div></div><div class="kpi-value">${Math.round(Number(p.exploration_budget_pct||0)*100)}%</div><div class="kpi-delta">Portfolio exploration policy</div></div><div class="kpi kpi-navy"><div class="kpi-head"><div class="kpi-label">Channels scaling</div><div class="kpi-icon">${icon('check')}</div></div><div class="kpi-value">${scaling}<span class="kpi-of"> of ${allocations.length}</span></div><div class="kpi-delta">Based on prior cycle budgets</div></div></div><section class="card card-tinted"><div class="card-label">Strategy summary</div><p class="strategy-text">${esc(p.strategy_summary)}</p>${p.major_uncertainties?.length?`<div class="alert alert-warning"><div><strong>Major uncertainties:</strong> ${esc(p.major_uncertainties.join(' · '))}</div></div>`:''}</section><section class="card section-gap"><div class="alloc-head"><h2 class="card-title">Allocation changes</h2><div class="alloc-total">${money(total)} proposed</div></div><div class="table-scroll"><table class="table"><thead><tr><th>Channel</th><th>Current spend</th><th>Proposed spend</th><th>Share</th><th>Experiment</th></tr></thead><tbody>${allocations.map(a=>`<tr><td><div class="cell-channel">${esc(labels[a.channel]||a.channel)}</div><button class="expand-toggle" type="button">${esc(a.hypothesis||'Show experiment details')}</button></td><td class="num">${money(a.current_budget)}</td><td class="num cell-proposed">${money(a.proposed_budget)}</td><td class="num">${(Number(a.proposed_share||0)*100).toFixed(1)}%</td><td><details><summary>${esc(a.reason||a.message_angle||'Experiment')}</summary><p>Audience: ${esc(a.audience)}</p><p>Message: ${esc(a.message_angle)}</p><p>Evidence: ${esc(a.evidence_used)}</p><p>Window: ${a.evaluation_window_days} days · Target: ${money(a.success_threshold)}</p></details></td></tr>`).join('')}</tbody></table></div></section>`;
 }
-
-// ---------- Router / renderer ----------
-const VIEWS = {
-  brief: renderBrief,
-  dashboard: renderDashboard,
-  approval: renderApproval,
-  analytics: renderAnalytics,
-  activity: renderActivity,
-};
-
+function drafts() {
+  const c = state.run?.result?.content_package;
+  if (!c) return '<section class="card section-gap content-empty"><h2 class="card-title">Content drafts are still being generated</h2><p>The Content agent will attach channel-specific variants here before approval.</p></section>';
+  const items=c.items||[], total=items.reduce((n,it)=>n+(it.assets||[]).length,0);
+  return `<div class="drafts-banner"><span class="title-icon blue">${icon('fileText')}</span><div class="drafts-banner-text"><div>Creative package for <strong>Cycle ${state.run.cycle_id}</strong></div><div class="drafts-disclaimer">${esc(c.disclaimer||'Review these drafts as proposed experiments; nothing is published automatically.')}</div></div><span class="drafts-count">${items.length} channels · ${total} variants</span></div><div class="content-summary"><div class="card-label">Creative direction</div><p>${esc(c.summary||'Channel-specific creative generated from the approved experiment hypotheses.')}</p></div>${items.map((it,i)=>`<section class="card card-accent section-gap draft-card"><div class="draft-head"><div class="card-title-row"><span class="title-icon ${['','blue','light','orange','navy'][i%5]} num">${i+1}</span><div><h2 class="card-title">${esc(labels[it.channel]||it.channel)}</h2><div class="draft-format">${esc(it.format||'Marketing creative')} · ${it.assets?.length||0} variants</div></div></div><span class="badge badge-awaiting">Draft</span></div><details class="plan-strip"><summary>From the experiment plan</summary><dl class="plan-strip-body"><dt>Targeting</dt><dd>${esc(it.targeting_notes||'')}</dd><dt>Compliance</dt><dd>${esc(it.compliance_notes||'')}</dd></dl></details>${(it.assets||[]).map(a=>`<article class="preview-card"><div class="variant-label">${esc(a.variant_label||'Variant')}</div><h3>${esc(a.headline||'')}</h3><div class="preserve-lines">${esc(a.body||'')}</div>${a.secondary_headlines?.length?`<div class="secondary-lines">${a.secondary_headlines.map(x=>`<span>${esc(x)}</span>`).join('')}</div>`:''}<div class="draft-cta">${esc(a.call_to_action||'')}</div>${a.hashtags?.length?`<div class="pv-hashtags">${a.hashtags.map(x=>`<span class="hashtag">${esc(x.startsWith('#')?x:'#'+x)}</span>`).join('')}</div>`:''}</article>`).join('')}</section>`).join('')}`;
+}
+function approval() {
+  const r=state.run;
+  if (!r) return header('Approval','Review a generated plan before it runs.')+statusCard();
+  const awaiting=r.status==='WAITING_APPROVAL';
+  return `<div class="content-wrap"><header class="approval-header page-head"><div class="page-eyebrow"><span class="dot orange"></span>Step 3 · Approve</div><h1 class="page-title">Cycle ${r.cycle_id} plan</h1><span class="badge ${awaiting?'badge-awaiting':'badge-approved'}">${awaiting?'Awaiting your approval':esc(pretty(r.status))}</span><p class="approval-meta">Generated by the Strategist and Content agents · ${esc(when(r.updated_at))}</p></header>${statusCard()}<div class="tabs" role="tablist"><button class="tab ${state.approvalTab==='plan'?'active':''}" data-tab="plan" type="button">Proposed Plan</button><button class="tab ${state.approvalTab==='drafts'?'active':''}" data-tab="drafts" type="button">Content Drafts</button></div>${state.approvalTab==='drafts'?drafts():planCard()}${awaiting && state.approvalTab==='plan'?`<section class="approval-banner"><div class="banner-icon">${icon('clock')}</div><div class="banner-body"><div class="banner-title">Nothing runs until you approve</div><div class="banner-sub">Review the allocation and content, or send feedback to the Strategist.</div></div><button class="btn btn-human" type="button" data-action="approve" ${state.busy?'disabled':''}>Approve simulation ${icon('trendUp')}</button></section><section class="card section-gap reject-box"><h2 class="card-title">Request a revision</h2><form id="revisionForm"><label class="workspace-field">What should change?<textarea name="feedback" required spellcheck="false" placeholder="For example: keep more budget on high-intent Search and explain the CFO audience more clearly."></textarea></label><button class="btn btn-secondary" type="submit" ${state.busy?'disabled':''}>Send feedback to Strategist</button></form></section>`:''}</div>`;
+}
+function metrics() {
+  const rows=state.run?.result?.results || [];
+  if (!rows.length) return '<section class="card"><p>No measured results yet. Results appear after approval and execution.</p></section>';
+  const spend=rows.reduce((s,r)=>s+Number(r.spend),0), outcomes=rows.reduce((s,r)=>s+Number(r.primary_outcomes),0);
+  return `<div class="workspace-grid metric-grid"><section class="card"><div class="card-label">Simulated spend</div><h2>${money(spend)}</h2></section><section class="card"><div class="card-label">Simulated outcomes</div><h2>${outcomes}</h2></section><section class="card"><div class="card-label">Cost per outcome</div><h2>${outcomes ? money(spend/outcomes) : 'Not measurable'}</h2></section></div>`;
+}
+function portfolioChart() {
+  const runs = (state.workspace?.runs || []).filter(r => r.status === 'COMPLETE' && r.result?.results?.length)
+    .sort((a,b) => Number(a.cycle_id) - Number(b.cycle_id));
+  if (!runs.length) return `<section class="card section-gap"><h2 class="card-title">Cost per outcome over time</h2><p class="chart-sub">The live chart will appear after the first cycle completes.</p></section>`;
+  const W = 1080, H = 390, left = 70, right = 210, top = 28, bottom = 54;
+  const plotW = W-left-right, plotH = H-top-bottom;
+  const target = Number(state.workspace?.brief?.primary_goal?.target_cac || 0);
+  const series = channels.map((ch, i) => ({channel:ch, name:labels[ch], color:['#0097A7','#5574D9','#E38A3C','#8D63B8','#1F8F66'][i], values:runs.map(run => {
+    const row = (run.result.results || []).find(x => x.channel === ch);
+    return row && Number(row.primary_outcomes) > 0 ? Number(row.observed_cac) : null;
+  })})).filter(s => s.values.some(v => v !== null));
+  const numbers = series.flatMap(s => s.values.filter(v => v !== null));
+  const max = Math.max(target, ...numbers, 1) * 1.18;
+  const x = i => left + (runs.length === 1 ? plotW/2 : plotW*i/(runs.length-1));
+  const y = value => top + plotH - (value/max)*plotH;
+  const grid = [0, .25, .5, .75, 1].map(p => `<line class="chart-grid" x1="${left}" y1="${y(max*p)}" x2="${W-right}" y2="${y(max*p)}" stroke-width="1"/><text class="chart-label" x="${left-10}" y="${y(max*p)+4}" text-anchor="end" font-size="12">S$${Math.round(max*p)}</text>`).join('');
+  const lines = series.map(s => {
+    let path = '', dots = '';
+    s.values.forEach((v,i) => { if (v == null) return; path += `${path && s.values[i-1] != null ? ' L' : 'M'}${x(i)},${y(v)}`; dots += `<circle cx="${x(i)}" cy="${y(v)}" r="5" fill="var(--surface)" stroke="${s.color}" stroke-width="3"><title>Cycle ${runs[i].cycle_id} · ${s.name}: ${money(v)} per outcome</title></circle>`; });
+    return `<path class="chart-line" d="${path}" fill="none" stroke="${s.color}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>${dots}`;
+  }).join('');
+  const targetLine = target ? `<line x1="${left}" y1="${y(target)}" x2="${W-right}" y2="${y(target)}" stroke="#0097A7" stroke-width="2" stroke-dasharray="7 6"/><text x="${W-right+12}" y="${y(target)+4}" fill="#0097A7" font-size="12">Target ${money(target)}</text>` : '';
+  const labelsSvg = runs.map((r,i) => `<line class="chart-vgrid" x1="${x(i)}" y1="${top}" x2="${x(i)}" y2="${top+plotH}" stroke-width="1" stroke-dasharray="3 5"/><text class="chart-xlabel" x="${x(i)}" y="${H-18}" text-anchor="middle" font-size="13">Cycle ${r.cycle_id}</text>`).join('');
+  return `<section class="card section-gap"><h2 class="card-title">Cost per outcome over time</h2><p class="chart-sub">Completed cycles only · lower is better · gaps mean that channel recorded no outcomes.</p><div class="chart-wrap"><svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="Cost per outcome by channel across completed cycles">${grid}${labelsSvg}${targetLine}${lines}</svg></div><div class="chart-legend">${series.map(s=>`<span class="key"><span class="line" style="background:${s.color}"></span>${esc(s.name)}</span>`).join('')}${target?'<span class="key"><span class="line dashed"></span>Target</span>':''}</div></section>`;
+}
+function analytics() {
+  const result=state.run?.result||{}, rows=result.results||[], verdicts=result.analysis_report?.verdicts||[], spend=rows.reduce((s,r)=>s+Number(r.spend||0),0), outcomes=rows.reduce((s,r)=>s+Number(r.primary_outcomes||0),0), best=rows.filter(r=>Number(r.primary_outcomes)>0).sort((a,b)=>Number(a.observed_cac)-Number(b.observed_cac))[0];
+  const digest= result.digest_markdown ? `<section class="card digest-card section-gap"><div class="digest-head"><div><div class="card-label">Founder-ready report</div><h2 class="digest-title">Cycle ${state.run?.cycle_id} portfolio digest</h2><p class="digest-tldr">${outcomes?`The simulation produced ${outcomes} ${esc(state.workspace.brief?.primary_goal?.metric_name||'outcomes')} from ${money(spend)} of spend.`:'The cycle is still collecting measured outcomes.'}</p></div>${button('download','Download readable report')}</div><div class="digest-section"><div class="card-label">What happened</div><p>${esc(result.digest_markdown.split(/\n\s*##/)[0].replace(/^#.*\n?/,'').trim()||'The saved digest is available for this cycle.')}</p></div>${verdicts.length?`<div class="digest-section"><div class="card-label">Agent recommendations</div>${verdicts.map(v=>`<div class="digest-verdict"><div class="digest-verdict-head"><strong>${esc(labels[v.channel]||v.channel)}</strong>${verdictBadge(v.verdict)}<span class="digest-conf">${v.confidence==null?'':Math.round(Number(v.confidence)*100)+'% confidence'}</span></div><div>${esc(v.reasoning_summary||'No explanation saved.')}</div></div>`).join('')}</div>`:''}<div class="digest-section"><div class="card-label">Learnings to carry forward</div>${result.learnings?.length?`<ol class="digest-list">${result.learnings.map(x=>`<li>${esc(x)}</li>`).join('')}</ol>`:'<p>No learning entries were saved for this cycle.</p>'}</div><details class="digest-technical"><summary>View technical detail</summary><div class="preserve-lines">${esc(result.digest_markdown)}</div></details></section>`:'';
+  return `<div class="content-wrap"><header class="page-head"><div class="page-eyebrow"><span class="dot live"></span>Results · Cycle ${state.run?.cycle_id||'—'}</div><h1 class="page-title">Analytics</h1><p class="page-sub">A founder-friendly view of the selected cycle’s simulated outcomes, verdicts and next actions.</p></header>${statusCard()}<div class="kpi-row"><div class="kpi kpi-teal"><div class="kpi-head"><div class="kpi-label">Total outcomes</div><div class="kpi-icon">${icon('users')}</div></div><div class="kpi-value">${countUp(outcomes)}</div><div class="kpi-delta">This cycle</div></div><div class="kpi kpi-blue"><div class="kpi-head"><div class="kpi-label">Best cost per outcome</div><div class="kpi-icon">${icon('target')}</div></div><div class="kpi-value">${best?money(best.observed_cac):'—'}</div><div class="kpi-delta">${best?esc(labels[best.channel]||best.channel):'Awaiting data'}</div></div><div class="kpi kpi-navy"><div class="kpi-head"><div class="kpi-label">Simulated spend</div><div class="kpi-icon">${icon('wallet')}</div></div><div class="kpi-value">${money(spend)}</div><div class="kpi-delta">Across ${rows.length} channels</div></div></div>${portfolioChart()}${rows.length?`<section class="card card-accent section-gap"><h2 class="card-title">Results by channel</h2><div class="table-scroll"><table class="table results-table"><thead><tr><th>Channel</th><th>Spend</th><th>Outcomes</th><th>Cost per outcome</th><th>Window</th><th>Verdict</th></tr></thead><tbody>${rows.map(r=>{const v=verdicts.find(x=>x.channel===r.channel);return `<tr><td class="cell-channel">${esc(labels[r.channel]||r.channel)}</td><td class="num">${money(r.spend)}</td><td class="num">${r.primary_outcomes}</td><td class="num ${v?.verdict==='SCALE'?'cac-good':v?.verdict==='CUT'?'cac-bad':''}">${r.primary_outcomes?money(r.observed_cac):'No outcomes'}</td><td>${r.days_observed}/${r.evaluation_window_days} days</td><td>${v?verdictBadge(v.verdict):'<span class="badge">Pending</span>'}</td></tr>`;}).join('')}</tbody></table></div></section>`:''}${digest}</div>`;
+}
+function dashboard() {
+  const w=state.workspace, r=state.run, result=r?.result||{}, rows=result.results||[], verdicts=result.analysis_report?.verdicts||[];
+  const spend=rows.reduce((s,x)=>s+Number(x.spend||0),0), outcomes=rows.reduce((s,x)=>s+Number(x.primary_outcomes||0),0), budget=Number(w.brief?.total_budget||0);
+  const plan=result.plan, allocations=plan?.allocations||[], totalPlan=allocations.reduce((s,a)=>s+Number(a.proposed_budget||0),0);
+  const done = r?.status==='COMPLETE' ? 4 : r?.status==='WAITING_APPROVAL' ? 2 : r?.status==='RUNNING' ? 1 : 0;
+  const steps=['Brief','Plan','Approve','Launch & Measure','Reflect'];
+  const allocationColors=['#4B98A7','#8DDCF0','#A9C8F2','#B89BE5','#76B79C'];
+  const allocBar=allocations.length ? `<div class="alloc-bar" role="img" aria-label="Current proposed budget allocation">${allocations.map((a,i)=>`<span style="width:${Number(a.proposed_share||0)*100}%;background:${allocationColors[i%allocationColors.length]}"></span>`).join('')}</div>${allocations.map((a,i)=>`<div class="legend-row"><div class="legend-left"><span class="legend-swatch" style="background:${allocationColors[i%allocationColors.length]}"></span>${esc(labels[a.channel]||a.channel)}</div><div class="legend-amount">${money(a.proposed_budget)}</div></div>`).join('')}`:'<p>Allocation details will appear when the Strategist completes a plan.</p>';
+  const verdictCards=verdicts.length ? verdicts.map((v,i)=>`<div class="verdict-tile" style="--i:${i}"><div class="verdict-tile-head"><div class="verdict-channel">${esc(labels[v.channel]||v.channel)}</div>${verdictBadge(v.verdict)}</div><div class="verdict-stats"><div class="stat"><div class="stat-label">Confidence</div><div class="stat-value">${v.confidence == null ? '—' : countUp(Number(v.confidence)*100,'','%')}</div></div><div class="stat"><div class="stat-label">Observed CAC</div><div class="stat-value">${v.observed_cac == null ? '—' : money(v.observed_cac)}</div></div><div class="stat"><div class="stat-label">Target CAC</div><div class="stat-value">${money(v.target_cac || w.brief?.primary_goal?.target_cac)}</div></div></div><div class="verdict-conf"><span style="width:${Math.max(0,Math.min(100,Number(v.confidence||0)*100))}%"></span></div><div class="verdict-note">${esc(v.recommended_budget_direction||'')} ${esc(v.reasoning_summary||'')}</div></div>`).join('') : '<p>Analyst verdicts will appear after the cycle completes.</p>';
+  return `<div class="content-wrap"><section class="hero" aria-labelledby="dashTitle"><div class="hero-top"><div><div class="hero-eyebrow"><span class="dot"></span>${r ? `Cycle ${r.cycle_id} · ${esc(pretty(r.status))}` : 'Your marketing workspace'}</div><h1 class="page-title hero-title" id="dashTitle">Dashboard</h1><p class="hero-sub">Where the budget sits, what each channel earned, and what needs you next.</p></div><span class="hero-pill ${r?.status==='WAITING_APPROVAL'?'orange':'teal'}">${icon(r?.status==='WAITING_APPROVAL'?'clock':'check')}${r?.status==='WAITING_APPROVAL'?'Waiting on your approval':r?.status==='COMPLETE'?'Cycle complete':'Workflow in progress'}</span></div><div class="hero-body"><div class="hero-money"><div class="hero-money-label">Budget under management</div><div class="hero-money-value"><span class="cur">S$</span>${countUp(budget)}<span class="per">/ cycle</span></div><div class="hero-money-meta"><span>Allocated across <strong>${allocations.length || '—'} channels</strong></span><span class="sep"></span><span><strong>${r ? esc(pretty(r.status)) : 'No cycle yet'}</strong></span></div></div><div class="hero-chart"><div class="hero-chart-head"><div><div class="hero-chart-label">Current cost per outcome</div><div class="hero-chart-value">${outcomes ? money(spend/outcomes) : '—'}</div></div><span class="hero-chart-delta">${outcomes ? `${outcomes} outcomes` : 'Awaiting results'}</span></div>${portfolioChart().replace(/^<section[^>]*>|<\/section>$/g,'')}</div></div></section><div class="kpi-row"><div class="kpi kpi-teal"><div class="kpi-head"><div class="kpi-label">Outcomes this cycle</div><div class="kpi-icon">${icon('users')}</div></div><div class="kpi-value">${countUp(outcomes)}</div><div class="kpi-delta">${r?.status==='COMPLETE'?'Measured simulation outcomes':'Results pending'}</div></div><div class="kpi kpi-blue"><div class="kpi-head"><div class="kpi-label">Cost per outcome</div><div class="kpi-icon">${icon('target')}</div></div><div class="kpi-value">${outcomes?money(spend/outcomes):'—'}</div><div class="kpi-delta">Target ${money(w.brief?.primary_goal?.target_cac)}</div></div><div class="kpi kpi-navy"><div class="kpi-head"><div class="kpi-label">Spent so far</div><div class="kpi-icon">${icon('wallet')}</div></div><div class="kpi-value">${money(spend)}</div><div class="kpi-delta">of ${money(budget)}</div></div><div class="kpi kpi-orange"><div class="kpi-head"><div class="kpi-label">Waiting on you</div><div class="kpi-icon">${icon('clock')}</div></div><div class="kpi-value">${r?.status==='WAITING_APPROVAL'?1:0}</div><div class="kpi-delta">${r?.status==='WAITING_APPROVAL'?'<button class="kpi-link" data-goto="approval">Review plan →</button>':'Nothing needs your decision'}</div></div></div><section class="card cycle-card"><div class="cycle-head"><div class="cycle-title">${r?`Cycle ${r.cycle_id}`:'First cycle'}</div><div class="card-label">Current status</div></div><div class="stepper" aria-label="Cycle progress">${steps.map((name,i)=>`${i?`<div class="step-connector ${i<=done?'done':''}"></div>`:''}<div class="step ${i<done?'done':i===done?'current':''}"><div class="step-num">${i<done?icon('check'):i+1}</div><div class="step-name">${name}</div></div>`).join('')}</div></section><div class="dash-grid"><section class="card"><div class="cycle-head alloc-head-row"><div class="card-label">Allocation ${r?`— Cycle ${r.cycle_id}`:''}</div><div class="alloc-deployed">${money(totalPlan)} proposed</div></div>${allocBar}</section><section class="card verdict-card"><div class="cycle-head verdict-head"><div class="card-label">Latest verdicts</div><div class="verdict-meta">${verdicts.length} channels</div></div>${verdictCards}</section></div>${portfolioChart()}<section class="card section-gap"><h2>Cycle history</h2>${w.runs.length?`<div class="table-scroll"><table class="table"><thead><tr><th>Cycle</th><th>Status</th><th>Started</th><th>Events</th></tr></thead><tbody>${w.runs.map(x=>`<tr><td><button class="btn btn-ghost" data-run="${esc(x.run_id)}">Cycle ${x.cycle_id}</button></td><td>${esc(pretty(x.status))}</td><td>${esc(when(x.created_at))}</td><td>${x.events.length}</td></tr>`).join('')}</tbody></table></div>`:'<p>Your first cycle will appear here after you start planning.</p>'}</section>${result.learnings?.length?`<section class="card section-gap"><h2>Learning carried forward</h2><ul>${result.learnings.map(x=>`<li>${esc(x)}</li>`).join('')}</ul></section>`:''}</div>`;
+}
+function activity() {
+  const r=state.run;
+  const events=r?.events||[];
+  return `<div class="content-wrap"><header class="page-head"><div class="page-eyebrow"><span class="dot live"></span>Live · Cycle ${r?.cycle_id||'—'} workflow</div><h1 class="page-title">Agent Activity</h1><p class="page-sub">Follow the supervisor as it loads context, plans, validates, waits for approval, executes, measures and learns.</p></header>${statusCard()}<div class="activity-layout"><div class="timeline">${events.length?events.map((e,i)=>`<div class="timeline-entry"><div class="tl-time">${esc(when(e.timestamp))}</div><div class="tl-rail"><span class="tl-dot ${e.status==='FAILED'?'orange':i===events.length-1?'teal':''}"></span>${i<events.length-1?'<span class="tl-line"></span>':''}</div><div class="tl-card ${e.status==='FAILED'?'tl-gate':i===events.length-1?'tl-active':''}"><div class="tl-chips"><span class="node-chip">${esc(pretty(e.node))}</span><span class="${e.status==='FAILED'?'repair-chip':e.status==='COMPLETED'?'pass-chip':'gate-chip'}">${esc(pretty(e.status))}</span></div><div class="tl-summary">${esc(e.message||'Workflow event recorded.')}</div>${e.errors?.length?`<div class="tl-summary error-copy">${esc(e.errors.join('; '))}</div>`:''}${e.verdict_summary?.length?`<div class="tl-summary">${esc(e.verdict_summary.join(' · '))}</div>`:''}</div></div>`).join(''):'<section class="card content-empty"><h2 class="card-title">No agent events yet</h2><p>Start a planning cycle to see the live supervisor timeline.</p></section>'}</div><aside class="card reasoning-panel"><div class="card-label">Workflow context</div><div class="reasoning-body">${esc([`Cycle ${r?.cycle_id||'—'}`,`Status: ${pretty(r?.status||'NOT_STARTED')}`,`Events recorded: ${events.length}`,r?.current_node?`Current node: ${pretty(r.current_node)}`:'No node currently running',r?.error?`Error: ${r.error}`:''].filter(Boolean).join('\n'))}</div></aside></div></div>`;
+}
 function render() {
-  const main = document.getElementById('main');
-  main.innerHTML = VIEWS[state.view]();
-  // Play the enter animation only when switching views, not on every state change
-  if (render._lastView !== state.view) {
-    const wrap = main.querySelector('.content-wrap');
-    if (wrap) wrap.classList.add('is-entering');
-    animateCounters(main);
-  }
-  render._lastView = state.view;
-  document.querySelectorAll('.nav-item').forEach((el) => {
-    el.classList.toggle('active', el.dataset.view === state.view);
-  });
-  // Sidebar badge = number of plans waiting on the founder
-  const pending = state.planStatus === 'pending' ? 1 : 0;
-  const navBadge = document.getElementById('navBadge');
-  navBadge.textContent = pending;
-  navBadge.hidden = pending === 0;
-  window.scrollTo(0, 0);
+  sidebar();
+  if (!state.workspace) { $('main').innerHTML=`<div class="content-wrap"><h1>Workspace unavailable</h1><p role="alert">${esc(state.error)}</p>${button('refresh','Retry loading')}</div>`; return; }
+  const views={brief:renderBrief,dashboard,approval,analytics,activity}; if (!views[state.view]) state.view='brief';
+  $('main').innerHTML=`<div class="content-wrap"><div id="syncError" class="workspace-error" role="alert" ${state.error?'':'hidden'}>${esc(state.error)}</div>${state.view==='brief'?'':runPicker()}${views[state.view]()}</div>`;
 }
-
-function toggleHelp(open) {
-  const panel = document.getElementById('helpPanel');
-  const fab = document.querySelector('.help-fab');
-  const show = open == null ? panel.hidden : open;
-  panel.hidden = !show;
-  fab.setAttribute('aria-expanded', String(show));
-}
-
-function navigate(view) {
-  if (!VIEWS[view]) view = 'brief';
-  state.view = view;
-  if (location.hash !== '#' + view) history.replaceState(null, '', '#' + view);
-  render();
-  // On narrow screens the expanded sidebar is an overlay — close it after picking a page
-  if (narrowScreen.matches && !isNavCollapsed()) setNav(true, false);
-}
-
-// ---------- Collapsible sidebar ----------
-const NAV_KEY = 'traction.navCollapsed';
-const narrowScreen = window.matchMedia('(max-width: 900px)');
-
-function isNavCollapsed() {
-  return document.querySelector('.app').classList.contains('nav-collapsed');
-}
-
-function setNav(collapsed, persist = true) {
-  document.querySelector('.app').classList.toggle('nav-collapsed', collapsed);
-  const btn = document.querySelector('.sidebar-toggle');
-  btn.setAttribute('aria-expanded', String(!collapsed));
-  btn.setAttribute('aria-label', collapsed ? 'Expand sidebar' : 'Collapse sidebar');
-  if (persist) {
-    try { localStorage.setItem(NAV_KEY, collapsed ? '1' : '0'); } catch (_) { /* storage unavailable */ }
-  }
-}
-
-function savedNavPref() {
-  try { return localStorage.getItem(NAV_KEY) === '1'; } catch (_) { return false; }
-}
-
-function initNav() {
-  // Hover labels for the collapsed rail come from the visible nav text
-  document.querySelectorAll('.nav-item').forEach((el) => {
-    el.dataset.label = el.querySelector('.nav-label').textContent.trim();
-  });
-  setNav(narrowScreen.matches ? true : savedNavPref(), false);
-  narrowScreen.addEventListener('change', (e) => setNav(e.matches ? true : savedNavPref(), false));
-  // Enable the width transition only after the initial state is applied
-  requestAnimationFrame(() => document.querySelector('.app').classList.add('nav-ready'));
-}
-
-window.addEventListener('hashchange', () => navigate(location.hash.slice(1)));
-
-// ---------- Event delegation ----------
-document.addEventListener('click', (e) => {
-  if (e.target.closest('.sidebar-toggle')) { setNav(!isNavCollapsed()); return; }
-  if (e.target.closest('.theme-toggle')) {
-    applyTheme(document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark', true, true);
-    return;
-  }
-  if (e.target.closest('.nav-backdrop')) { setNav(true, false); return; }
-  if (e.target.closest('.help-fab')) { toggleHelp(); return; }
-  if (e.target.closest('[data-close-help]')) { toggleHelp(false); return; }
-  if (!e.target.closest('#helpPanel')) toggleHelp(false);
-
-  const navItem = e.target.closest('.nav-item');
-  if (navItem) {
-    e.preventDefault();
-    navigate(navItem.dataset.view);
-    return;
-  }
-
-  const goto = e.target.closest('[data-goto]');
-  if (goto) { navigate(goto.dataset.goto); return; }
-
-  const tlLink = e.target.closest('.tl-link');
-  if (tlLink) { e.preventDefault(); navigate('approval'); return; }
-
-  const tab = e.target.closest('[data-tab]');
-  if (tab) { state.approvalTab = tab.dataset.tab; render(); return; }
-
-  const expand = e.target.closest('[data-expand]');
-  if (expand) {
-    const ch = expand.dataset.expand;
-    state.expandedRows[ch] = !state.expandedRows[ch];
-    render();
-    return;
-  }
-
-  const removeChip = e.target.closest('[data-remove-chip]');
-  if (removeChip) {
-    const list = removeChip.dataset.removeChip === 'excluded' ? state.exclusions : state.preferences;
-    const i = list.indexOf(removeChip.dataset.name);
-    if (i > -1) list.splice(i, 1);
-    render();
-    return;
-  }
-
-  const addChip = e.target.closest('[data-add-chip]');
-  if (addChip) {
-    const kind = addChip.dataset.addChip;
-    const input = document.getElementById(kind === 'excluded' ? 'addExclusion' : 'addPreference');
-    const name = input.value.trim();
-    if (!name) return;
-    (kind === 'excluded' ? state.exclusions : state.preferences).push(name);
-    render();
-    return;
-  }
-
-  const action = e.target.closest('[data-action]');
-  if (!action) return;
-
-  switch (action.dataset.action) {
-    case 'save-brief':
-      showToast('Brief saved. The agent will use it from the next planning run.');
-      break;
-    case 'edit':
-      state.editMode = true;
-      state.validationError = null;
-      render();
-      break;
-    case 'save-edits': {
-      const total = proposedTotal();
-      if (total !== BUDGET) {
-        state.validationError = `Your edits total ${fmt(total)} — the plan must equal ${fmt(BUDGET)}.`;
-      } else {
-        state.editMode = false;
-        state.validationError = null;
-        showToast('Edits saved and re-checked against your budget rules.');
-      }
-      render();
-      break;
+function chooseRun(id) { state.run=state.workspace.runs.find(r=>r.run_id===id); localStorage.setItem(selectionKey(),id); render(); }
+async function work(action) {
+  if (state.busy) return;
+  let payload;
+  try { if (action==='save' || action==='start') payload=readBrief(); }
+  catch(err) { toast(err.message); return; }
+  state.busy=true;
+  document.querySelectorAll('#briefForm button, #revisionForm button, [data-action="approve"]').forEach(b=>b.disabled=true);
+  try {
+    if (action==='save' || action==='start') await saveBrief(payload);
+    if (action==='start') {
+      const run=await api('/runs','POST',{request_id:crypto.randomUUID()}); state.workspace.runs.unshift(run); state.run=run; localStorage.setItem(selectionKey(),run.run_id); location.hash='activity';
     }
-    case 'reject':
-      state.planStatus = 'rejected';
-      state.editMode = false;
-      showToast('Plan rejected. The agent will draft a revised proposal.');
-      render();
-      break;
-    case 'approve':
-      if (action.disabled) return;
-      state.planStatus = 'approved';
-      state.editMode = false;
-      showToast('Cycle 5 plan approved. Launching channels…');
-      render();
-      break;
-    case 'save-drafts':
-      state.approvalTab = 'plan';
-      showToast('Drafts saved to Cycle 5 plan.');
-      render();
-      break;
-  }
-});
-
-// Live-update proposed spend totals while editing
-document.addEventListener('input', (e) => {
-  // Message-angle preview on the Content Drafts tab
-  const angleInput = e.target.closest('[data-angle-input]');
-  if (angleInput) {
-    const preview = document.querySelector(`[data-angle-preview="${angleInput.dataset.angleInput}"]`);
-    if (preview) preview.textContent = angleInput.value.trim() || 'Your message angle will appear here.';
-    return;
-  }
-
-  const spendInput = e.target.closest('[data-spend-input]');
-  if (!spendInput) return;
-  state.spends[spendInput.dataset.spendInput] = Number(spendInput.value) || 0;
-
-  // Update the total indicator + change cells in place (avoid full re-render to keep focus)
-  const total = proposedTotal();
-  const indicator = document.querySelector('.alloc-total');
-  if (indicator) {
-    const ok = total === BUDGET;
-    indicator.className = 'alloc-total ' + (ok ? 'ok' : 'bad');
-    indicator.textContent = ok ? `Total: ${fmt(total)} ✓` : `Total: ${fmt(total)} — must equal ${fmt(BUDGET)}`;
-  }
-  const approveBtn = document.querySelector('[data-action="approve"]');
-  if (approveBtn) approveBtn.disabled = total !== BUDGET;
-
-  const row = spendInput.closest('tr');
-  const pill = row && row.querySelector('.change-pill');
-  if (pill) {
-    const current = CURRENT_SPEND[spendInput.dataset.spendInput];
-    const proposed = Number(spendInput.value) || 0;
-    pill.className = 'change-pill ' + (proposed >= current ? 'change-up' : 'change-down');
-    pill.textContent = fmtDelta(proposed, current);
-  }
-
-  // Keep the proposed allocation bar and the total tile in step with the edits
-  const scaleTo = Math.max(BUDGET, total);
-  document.querySelectorAll('[data-compare="proposed"] [data-bar-channel]').forEach((seg) => {
-    const amt = Number(state.spends[seg.dataset.barChannel]) || 0;
-    seg.style.width = `${(amt / scaleTo) * 100}%`;
-    seg.title = `${seg.dataset.barChannel} · ${fmt(amt)}`;
-  });
-  const totalTile = document.querySelector('[data-plan-total]');
-  if (totalTile) {
-    const ok = total === BUDGET;
-    totalTile.textContent = fmt(total);
-    const tile = totalTile.closest('.kpi');
-    tile.classList.toggle('kpi-teal', ok);
-    tile.classList.toggle('kpi-orange', !ok);
-    const note = tile.querySelector('[data-plan-total-note]');
-    note.className = 'kpi-delta ' + (ok ? 'up' : '');
-    note.innerHTML = ok ? icon('check') + 'Matches the ' + fmt(BUDGET) + ' budget' : 'Must equal ' + fmt(BUDGET);
-  }
-});
-
-document.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape') {
-    toggleHelp(false);
-    if (narrowScreen.matches && !isNavCollapsed()) setNav(true, false);
-  }
-});
-
-// ---------- Chart tooltips ----------
-function showChartTip(dot) {
-  const tip = document.getElementById('chartTooltip');
-  const wrap = dot.closest('.chart-wrap');
-  if (!tip || !wrap) return;
-  let rows = [];
-  try { rows = JSON.parse(dot.dataset.tipRows || '[]'); } catch (_) { rows = []; }
-  tip.innerHTML = `<div class="tip-title">${dot.dataset.tipTitle}</div>` + rows.map((r) => `
-    <div class="tip-row"><span class="tip-swatch" style="background:${r.color}"></span><strong>${r.name}</strong><span>S$${r.value} per signup</span></div>`).join('');
-  tip.hidden = false;
-  const mark = dot.querySelector('.chart-dot-mark').getBoundingClientRect();
-  const box = wrap.getBoundingClientRect();
-  const left = mark.left - box.left + mark.width / 2 + wrap.scrollLeft;
-  // The chart container clips overflow, so flip the bubble below points near the top
-  const spaceAbove = mark.top - box.top;
-  const below = spaceAbove < tip.offsetHeight + 16;
-  tip.classList.toggle('below', below);
-  tip.style.left = `${left}px`;
-  tip.style.top = below ? `${mark.bottom - box.top + 12}px` : `${spaceAbove - 12}px`;
-  // Keep the tooltip inside the chart horizontally
-  const half = tip.offsetWidth / 2;
-  const shift = Math.max(0, half - left) - Math.max(0, left + half - wrap.clientWidth);
-  tip.style.transform = `translate(calc(-50% + ${shift}px), ${below ? '0' : '-100%'})`;
-  tip.style.setProperty('--arrow-shift', `${-shift}px`);
-}
-
-function hideChartTip() {
-  const tip = document.getElementById('chartTooltip');
-  if (tip) tip.hidden = true;
-}
-
-document.addEventListener('mouseover', (e) => {
-  const dot = e.target.closest('.chart-dot');
-  if (dot) showChartTip(dot);
-});
-document.addEventListener('mouseout', (e) => {
-  const dot = e.target.closest('.chart-dot');
-  if (dot && !dot.contains(e.relatedTarget)) hideChartTip();
-});
-document.addEventListener('focusin', (e) => {
-  const dot = e.target.closest('.chart-dot');
-  if (dot) showChartTip(dot);
-});
-document.addEventListener('focusout', (e) => {
-  if (e.target.closest('.chart-dot')) hideChartTip();
-});
-
-// ---------- Light / dark theme ----------
-const THEME_KEY = 'traction.theme';
-const darkScheme = window.matchMedia('(prefers-color-scheme: dark)');
-
-function savedTheme() {
-  try { return localStorage.getItem(THEME_KEY); } catch (_) { return null; }
-}
-
-function applyTheme(theme, persist = true, animate = false) {
-  const root = document.documentElement;
-  const dark = theme === 'dark';
-
-  const commit = () => {
-    root.dataset.theme = theme;
-    const btn = document.querySelector('.theme-toggle');
-    if (btn) {
-      btn.setAttribute('aria-pressed', String(dark));
-      btn.setAttribute('aria-label', dark ? 'Switch to light mode' : 'Switch to dark mode');
-      btn.querySelector('.theme-label').textContent = dark ? 'Dark mode' : 'Light mode';
+    if (action==='approve' || action==='revise') {
+      const feedback = $('revisionForm') ? new FormData($('revisionForm')).get('feedback') : '';
+      const run=await api('/runs/'+state.run.run_id+(action==='approve'?'/approve':'/reject'),'POST',action==='revise'?{feedback}:{});
+      state.run=run; state.workspace.runs=state.workspace.runs.map(r=>r.run_id===run.run_id?run:r); location.hash='activity';
     }
-    const meta = document.querySelector('meta[name="theme-color"]');
-    if (meta) meta.setAttribute('content', dark ? '#0B121A' : '#1F2A38');
-  };
-
-  if (persist) {
-    try { localStorage.setItem(THEME_KEY, theme); } catch (_) { /* storage unavailable */ }
+    state.error=''; if (action==='save') toast('Founder brief saved.');
+  } catch(err) { state.error=err.message; toast(err.message); const message=$('briefMessage'); if(message) message.textContent=err.message; }
+  finally {
+    state.busy=false;
+    if (state.view!=='brief') render();
+    else document.querySelectorAll('#briefForm button').forEach(b=>b.disabled=b.dataset.action==='start' && state.workspace.runs.some(active));
+    schedule();
   }
-
-  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  if (!animate || reduceMotion || root.dataset.theme === theme) { commit(); return; }
-
-  // Preferred: let the browser crossfade a snapshot of the whole page (handles gradients too)
-  if (typeof document.startViewTransition === 'function') {
-    root.classList.add('theme-switching');
-    const vt = document.startViewTransition(commit);
-    // The browser skips the animation when the tab is hidden; the theme still applies.
-    // Each promise rejects separately on a skipped transition, so silence all three.
-    vt.ready.catch(() => {});
-    vt.updateCallbackDone.catch(() => {});
-    vt.finished.catch(() => {}).finally(() => root.classList.remove('theme-switching'));
-    return;
+}
+document.addEventListener('submit',e=>{if(e.target.id==='briefForm'){e.preventDefault();work('save');}if(e.target.id==='revisionForm'){e.preventDefault();work('revise');}});
+document.addEventListener('change',e=>{if(e.target.id==='runPicker')chooseRun(e.target.value);});
+window.addEventListener('hashchange',()=>{state.view=location.hash.slice(1)||'brief';if(state.workspace)render();});
+function setSidebar(collapsed) {
+  $('appShell').classList.toggle('nav-collapsed',collapsed);
+  const toggle=document.querySelector('.sidebar-toggle'); toggle.setAttribute('aria-expanded',String(!collapsed)); toggle.setAttribute('aria-label',collapsed?'Expand sidebar':'Collapse sidebar');
+}
+document.addEventListener('click',async e=>{
+  const a=e.target.closest('[data-action]'), auth=e.target.closest('[data-auth]'), run=e.target.closest('[data-run]');
+  const goto=e.target.closest('[data-goto]');
+  if(goto){ location.hash=goto.dataset.goto; return; }
+  const tab=e.target.closest('[data-tab]');
+  if(tab){ state.approvalTab=tab.dataset.tab; render(); return; }
+  if(auth){if(auth.dataset.auth==='resend'){try{await cognito('ResendConfirmationCode',{ClientId:cfg.cognitoClientId,Username:$('authUsername').value.trim()});toast('Confirmation code sent.');}catch(err){toast(err.message);}}else setMode(auth.dataset.auth);}
+  if(run){chooseRun(run.dataset.run);location.hash='approval';}
+  if(a){const action=a.dataset.action;
+    if(['start','approve'].includes(action))work(action);
+    if(action==='refresh')loadWorkspace();
+    if(action==='signout'){localStorage.removeItem(TOKEN);localStorage.removeItem(REFRESH);state.workspace=null;state.run=null;authGate();}
+    if(action==='download' && state.run){const digest=state.run.result?.digest_markdown||'No founder digest is available yet.';const text=`Augury — Cycle ${state.run.cycle_id} Founder Report\n${'='.repeat(42)}\n\n${digest}\n`;const blob=new Blob([text],{type:'text/plain;charset=utf-8'}),url=URL.createObjectURL(blob),link=document.createElement('a');link.href=url;link.download=`augury-cycle-${state.run.cycle_id}-report.txt`;link.click();URL.revokeObjectURL(url);toast('Readable report downloaded.');}
   }
-
-  // Fallback: briefly transition every colour property, then remove the hook
-  root.classList.add('theme-transition');
-  commit();
-  clearTimeout(applyTheme._timer);
-  applyTheme._timer = setTimeout(() => root.classList.remove('theme-transition'), 500);
-}
-
-function initTheme() {
-  // The <head> script already set data-theme before first paint; this syncs the button
-  applyTheme(document.documentElement.dataset.theme || (darkScheme.matches ? 'dark' : 'light'), false);
-  // Follow the OS setting until the user picks one explicitly
-  darkScheme.addEventListener('change', (e) => {
-    if (!savedTheme()) applyTheme(e.matches ? 'dark' : 'light', false);
-  });
-}
-
-// ---------- Boot ----------
-initTheme();
-initNav();
-navigate(location.hash.slice(1) || 'brief');
+  if(e.target.closest('.sidebar-toggle')){setSidebar(!$('appShell').classList.contains('nav-collapsed'));localStorage.setItem('augury.navCollapsed',$('appShell').classList.contains('nav-collapsed')?'1':'0');}
+  if(e.target.closest('.nav-backdrop') || (e.target.closest('[data-view]') && matchMedia('(max-width:900px)').matches))setSidebar(true);
+  if(e.target.closest('.theme-toggle')){const theme=document.documentElement.dataset.theme==='dark'?'light':'dark';document.documentElement.dataset.theme=theme;localStorage.setItem('augury.theme',theme);document.querySelector('.theme-label').textContent=theme==='dark'?'Dark mode':'Light mode';}
+  if(e.target.closest('.help-fab'))$('helpPanel').hidden=!$('helpPanel').hidden;
+  if(e.target.closest('[data-close-help]'))$('helpPanel').hidden=true;
+});
+setMode('signin');
+setSidebar(matchMedia('(max-width:900px)').matches || localStorage.getItem('augury.navCollapsed')==='1');
+matchMedia('(max-width:900px)').addEventListener('change',e=>setSidebar(e.matches));
+document.querySelector('.theme-label').textContent=document.documentElement.dataset.theme==='dark'?'Dark mode':'Light mode';
+if(localStorage.getItem(TOKEN))loadWorkspace();else authGate();

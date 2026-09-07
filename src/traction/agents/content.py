@@ -23,6 +23,7 @@ from langchain_core.messages import SystemMessage, HumanMessage
 from traction.config import settings
 from traction.logging import logger
 from traction.models import ModelFactory, get_content_structured_model
+from traction.schemas.content import GeneratedCreativePackage
 from traction.schemas.experiment import Channel, Allocation, ExperimentPlan
 from traction.schemas.content import (
     ContentFormat,
@@ -102,6 +103,8 @@ class BedrockContentGeneratorAgent(ContentGeneratorAgent):
             self._structured_model = None
         elif structured_model is not None:
             self._structured_model = structured_model
+        elif not settings.use_stub_models:
+            self._structured_model = get_content_structured_model(GeneratedCreativePackage)
         elif ModelFactory.bedrock_credentials_available():
             try:
                 self._structured_model = get_content_structured_model(ChannelContent)
@@ -158,9 +161,18 @@ class BedrockContentGeneratorAgent(ContentGeneratorAgent):
                     HumanMessage(content=self._prompt(alloc, cycle_id, name, pitch)),
                 ]
                 raw = self._structured_model.invoke(messages)
-                cc = raw if isinstance(raw, ChannelContent) else ChannelContent.model_validate(raw)
+                if isinstance(raw, GeneratedCreativePackage):
+                    fmt = CHANNEL_FORMAT[alloc.channel]
+                    cc = ChannelContent(channel=alloc.channel, experiment_id=alloc.experiment_id, format=fmt,
+                        hypothesis=alloc.hypothesis, audience=alloc.audience, message_angle=alloc.message_angle,
+                        assets=[ContentAsset(format=fmt, **a.model_dump()) for a in raw.assets],
+                        targeting_notes=raw.targeting_notes, compliance_notes=raw.compliance_notes)
+                else:
+                    cc = raw if isinstance(raw, ChannelContent) else ChannelContent.model_validate(raw)
                 return cc, True
             except Exception as exc:
+                if not settings.use_stub_models:
+                    raise RuntimeError(f"Bedrock Content failed for {alloc.channel.value}; no fallback was used") from exc
                 logger.warning(
                     f"content model failed for {alloc.channel.value} ({exc}); using templates",
                     extra={"cycle_id": cycle_id, "agent": "content"},
@@ -342,7 +354,7 @@ class BedrockContentGeneratorAgent(ContentGeneratorAgent):
                 format=fmt,
                 headline=headline,
                 body=body,
-                call_to_action=asset.call_to_action or _CTAS[idx % len(_CTAS)],
+                call_to_action=asset.call_to_action or (_CTAS[idx % len(_CTAS)] if settings.use_stub_models else ''),
                 secondary_headlines=sec,
                 hashtags=list(asset.hashtags or []),
                 char_counts={
@@ -354,6 +366,8 @@ class BedrockContentGeneratorAgent(ContentGeneratorAgent):
             ))
 
         if not assets:  # LLM returned nothing usable -> deterministic backfill
+            if not settings.use_stub_models:
+                raise ValueError('Bedrock returned no usable content assets')
             assets = self._deterministic_channel(alloc, "", "").assets
         assets = assets[: self.variants] if len(assets) > self.variants else assets
 

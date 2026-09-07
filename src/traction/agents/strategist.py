@@ -71,6 +71,12 @@ Please correct the allocations so that:
 1. Total budget equals ${brief.total_budget:.2f} exactly.
 2. Hard excluded channels receive $0.00.
 3. No negative allocations exist.
+
+Preserve the cycle ID, business context and intended experiments. Correct this complete plan:
+{invalid_plan.model_dump_json()}
+
+Founder brief, including hard exclusions:
+{brief.model_dump_json()}
 """
         messages = [
             SystemMessage(content=STRATEGIST_SYSTEM_PROMPT),

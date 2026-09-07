@@ -21,6 +21,8 @@ def route_after_validation(state: TractionGraphState) -> str:
 def route_after_approval(state: TractionGraphState) -> str:
     """Route after founder gate: proceed to execution or founder revision."""
     status = state.get("approval_status", "REJECTED")
+    if status == "PENDING":
+        return "end"
     if status == "APPROVED":
         return "execute"
     else:

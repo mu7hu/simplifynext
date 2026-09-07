@@ -27,6 +27,7 @@ from traction.schemas.founder import (
     ExclusionRule,
 )
 from traction.schemas.experiment import Channel
+from traction.storage.json_store import JsonStore, LocalJsonStore
 
 _DEFAULT_BRIEF_DIR = os.path.join("data", "founder_briefs")
 
@@ -316,6 +317,23 @@ class FileIntakeProvider(IntakeProvider):
         if startup_id == "ledger_ai":
             return _ledger_ai_brief()
         raise FileNotFoundError(f"No founder brief file for startup_id={startup_id!r} at {path}")
+
+
+class JsonIntakeProvider(IntakeProvider):
+    """Intake provider backed by a JSON object store such as S3."""
+
+    def __init__(self, store: JsonStore, prefix: str = "founder_briefs"):
+        self.store = store
+        self.prefix = prefix.strip("/")
+
+    def get_founder_brief(self, startup_id: str) -> FounderBrief:
+        safe = "".join(c for c in startup_id if c.isalnum() or c in ("_", "-")) or "default"
+        try:
+            return _coerce_to_brief(self.store.get_json(f"{self.prefix}/{safe}.json"))
+        except Exception:
+            if startup_id == "ledger_ai":
+                return _ledger_ai_brief()
+            raise
 
 
 def get_intake_provider(brief_dir: str = _DEFAULT_BRIEF_DIR) -> IntakeProvider:

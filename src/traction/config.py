@@ -62,6 +62,10 @@ class Settings(BaseSettings):
 
     # SQLite Persistent Ledger
     ledger_db_path: str = Field(default="data/traction.db", alias="LEDGER_DB_PATH")
+    ledger_backend: str = Field(default="sqlite", alias="LEDGER_BACKEND")
+    storage_backend: str = Field(default="local", alias="STORAGE_BACKEND")
+    aws_data_bucket: Optional[str] = Field(default=None, alias="AWS_DATA_BUCKET")
+    dynamodb_ledger_table: Optional[str] = Field(default=None, alias="DYNAMODB_LEDGER_TABLE")
 
 
 settings = Settings()

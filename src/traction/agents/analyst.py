@@ -177,6 +177,8 @@ class BedrockAnalystAgent(AnalystAgent):
             self._structured_model = None
         elif structured_model is not None:
             self._structured_model = structured_model
+        elif not settings.use_stub_models:
+            self._structured_model = get_analyst_structured_model(AnalysisReport)
         elif ModelFactory.bedrock_credentials_available():
             try:
                 self._structured_model = get_analyst_structured_model(AnalysisReport)
@@ -209,8 +211,12 @@ class BedrockAnalystAgent(AnalystAgent):
                 ]
                 raw = self._structured_model.invoke(messages)
                 report = raw if isinstance(raw, AnalysisReport) else AnalysisReport.model_validate(raw)
+                if not settings.use_stub_models and {v.channel for v in report.verdicts} != {a.channel for a in plan.allocations}:
+                    raise ValueError('Bedrock analysis must cover every planned channel exactly')
                 source = "bedrock"
             except Exception as exc:
+                if not settings.use_stub_models:
+                    raise RuntimeError("Bedrock Analyst failed; no fallback was used") from exc
                 logger.warning(
                     f"Bedrock analyst call failed ({exc}); falling back to deterministic analysis",
                     extra={"cycle_id": cycle_id, "agent": "analyst"},
@@ -550,8 +556,9 @@ class BedrockAnalystAgent(AnalystAgent):
 
             if r is not None:
                 window_complete = bool(r.is_window_complete)
-                if evidence == 0 and r.primary_outcomes:
-                    evidence = int(r.primary_outcomes)
+                evidence = int(r.primary_outcomes)
+                observed = float(r.observed_cac)
+                target = _target_cac(alloc, prior_by_ch.get(v.channel))
                 # Rule: never CUT a channel whose evaluation window is incomplete.
                 if not r.is_window_complete and verdict == Verdict.CUT:
                     verdict = Verdict.INSUFFICIENT_DATA
@@ -649,6 +656,6 @@ def get_analyst_agent() -> AnalystAgent:
     reasoning with deterministic safeguards); ``StubAnalystAgent`` otherwise, so
     offline demos and tests stay fast and fully deterministic.
     """
-    if ModelFactory.bedrock_credentials_available():
+    if not settings.use_stub_models:
         return BedrockAnalystAgent()
     return StubAnalystAgent()

@@ -54,3 +54,5 @@ class TractionGraphState(TypedDict, total=False):
     # Event Telemetry Stream
     events: list[dict[str, Any]]
     errors: list[str]
+    approval_only: bool
+    content_package: dict[str, Any]

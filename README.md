@@ -149,6 +149,85 @@ response = entrypoint({
 })
 ```
 
+## Serverless AWS Deployment (SAM)
+
+The repository now includes a serverless deployment boundary without requiring
+Bedrock AgentCore. The first AWS shape is intentionally simple:
+
+```text
+API Gateway HTTP API -> RunCycle Lambda -> DynamoDB ledger + S3 data bucket
+                     -> optional Bedrock model calls
+S3 + CloudFront      -> static frontend
+```
+
+The local SQLite and filesystem backends remain available for tests. AWS uses
+`DynamoDBExperimentLedger` and the S3 JSON store selected by environment
+variables. The infrastructure is defined in `template.yaml` and packaged as a
+Lambda ZIP packages. Native dependencies are built inside the AWS Lambda
+Python 3.12 Docker image so they are Linux-compatible.
+
+### Build locally with AWS SAM
+
+Install AWS SAM CLI and Docker Desktop, then run:
+
+```bash
+sam validate --lint
+.\scripts\build_lambda_package.ps1
+sam build
+sam local invoke RunCycleFunction --event events/run_cycle.json
+sam local start-api
+```
+
+For local SAM invocation before AWS resources exist, override the persistence
+backends with the bundled local data:
+
+```bash
+sam local invoke RunCycleFunction --event events/run_cycle.json --env-vars events/local-env.json
+```
+
+Keep `UseStubModels=true` until the local SAM API and DynamoDB integration have
+been tested. Deploy only from the `aws-serverless` branch:
+
+```bash
+sam deploy --template-file template.yaml --profile simplifynext --region us-east-1
+```
+
+The deploy command uses `samconfig.toml` when present. The package-building
+script must be rerun whenever application code or runtime dependencies change.
+
+The template creates the API, three Lambda functions, a pay-per-request
+DynamoDB table, and a private S3 data bucket. Upload the JSON files under
+`data/founder_briefs`, `data/example_profiles`, and `data/benchmark_priors` to
+the bucket after deployment. Never upload `.env`, credentials, SQLite files,
+or the local virtual environment.
+
+The API is protected by a Cognito JWT authorizer and has API Gateway throttling
+enabled. The stack outputs `CognitoUserPoolId` and `CognitoClientId`; the
+frontend must authenticate a user in that pool and send the resulting bearer
+token in the `Authorization` header. A repeatable deployment, including the
+reference-data upload, is available through:
+
+```powershell
+.\scripts\deploy_serverless.ps1
+```
+
+Host the static frontend privately behind HTTPS CloudFront with:
+
+```powershell
+python scripts/deploy_frontend.py --profile simplifynext --region us-east-1
+```
+
+This creates the `simplifynext-frontend` stack, uploads `index.html`,
+`app.js`, and `styles.css` to a private S3 bucket, and invalidates CloudFront.
+The current UI is a static prototype; connecting its actions to the protected
+API requires the frontend to implement Cognito sign-in and send the JWT bearer
+token described above.
+
+Create the first Cognito user from the AWS console or with the Cognito admin
+CLI after deployment. Keep `UseStubModels=true` while testing; change it to
+`false` only when Bedrock access and model spending have been explicitly
+approved.
+
 ---
 
 ## AnalystAgent as a Standalone Service
