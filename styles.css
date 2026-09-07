@@ -1337,6 +1337,8 @@ input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; marg
 .kpi-link:hover svg { transform: translateX(3px); }
 
 .kpi-row + .cycle-card { margin-top: 24px; }
+.content-wrap > .page-head + .live-status + .kpi-row { margin: 24px 0 0; }
+.content-wrap > .page-head + .kpi-row { margin: 24px 0 0; }
 
 /* ---- Allocation ---- */
 .alloc-head-row { margin-bottom: 14px; }
@@ -2390,12 +2392,12 @@ input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; marg
 
 .timeline-entry {
   display: grid;
-  grid-template-columns: 46px 26px 1fr;
+  grid-template-columns: 150px 30px minmax(0, 1fr);
   margin-bottom: 18px;
   position: relative;
 }
 
-.tl-time { color: var(--text-secondary); font-size: 13.5px; padding-top: 16px; font-variant-numeric: tabular-nums; }
+.tl-time { color: var(--text-secondary); font-size: 12.5px; line-height: 1.35; padding: 16px 12px 0 0; font-variant-numeric: tabular-nums; overflow-wrap:anywhere; }
 
 .tl-rail { position: relative; }
 
@@ -2604,7 +2606,8 @@ input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; marg
   .approval-banner .btn { margin-left: 0; width: 100%; }
   .help-fab { right: 16px; bottom: 16px; }
   .help-panel { right: 16px; bottom: 74px; }
-  .timeline-entry { grid-template-columns: 40px 22px 1fr; }
+  .timeline-entry { grid-template-columns: 96px 22px minmax(0, 1fr); }
+  .tl-time { font-size: 11px; padding-right: 8px; }
   .verdict-stats { gap: 24px; }
   .plan-strip-body, .draft-note { grid-template-columns: 1fr; gap: 4px 0; }
   .plan-strip-note { display: none; }
@@ -2702,6 +2705,8 @@ input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; marg
 :root[data-theme="dark"] .hero::before,
 :root[data-theme="dark"] .hero::after,
 :root[data-theme="dark"] .verdict-card .orb { display:none; }
+:root[data-theme="dark"] .hero { background:linear-gradient(135deg, #1A2432 0%, #1F2A38 48%, #11333D 100%); }
+:root[data-theme="dark"] .card-accent::before { opacity:.7; }
 :root[data-theme="dark"] .row-incomplete .cac-good { color: rgba(47, 184, 203, 0.5); }
 :root[data-theme="dark"] .row-incomplete .cac-bad { color: rgba(240, 154, 112, 0.5); }
 :root[data-theme="dark"] .row-incomplete .badge { opacity: 0.5; }
