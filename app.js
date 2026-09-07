@@ -130,7 +130,7 @@ function statusCard() {
   const r = state.run; if (!r) return '<section class="card"><h2>No cycles yet</h2><p>Save your founder brief and start your first planning cycle.</p><a href="#brief">Open Founder Brief</a></section>';
   return `<section class="card live-status" aria-live="polite"><div><span class="badge">Cycle ${r.cycle_id} · ${esc(pretty(r.status))}</span><p>${r.current_node ? esc(pretty(r.current_node)) + ' is working…' : r.status === 'WAITING_APPROVAL' ? 'Review the generated plan and content before approving.' : r.status === 'COMPLETE' ? 'Results and learnings are saved.' : 'Latest saved workflow state'}</p></div><div><span>${r.events.length} events</span><small>Updated ${esc(when(r.updated_at))}</small></div>${r.error ? `<p class="workspace-error" role="alert">${esc(r.error)}</p>` : ''}</section>`;
 }
-function helpLabel(label, help='') { return `${esc(label)}${help ? ` <span class="field-help" tabindex="0" role="img" aria-label="${esc(help)}" title="${esc(help)}">?</span>` : ''}`; }
+function helpLabel(label, help='') { return `${esc(label)}${help ? ` <span class="field-help" tabindex="0" role="img" aria-label="${esc(help)}" data-tooltip="${esc(help)}">?</span>` : ''}`; }
 function field(name, label, value, type='text', extra='', help='') { return `<label class="workspace-field">${helpLabel(label,help)}<input name="${name}" type="${type}" value="${esc(value)}" required spellcheck="false" ${extra}></label>`; }
 function select(name,label,values,value,help='') { return `<label class="workspace-field">${helpLabel(label,help)}<select name="${name}">${values.map(v => `<option value="${v}" ${v===value?'selected':''}>${esc(pretty(v))}</option>`).join('')}</select></label>`; }
 function renderBrief() {
