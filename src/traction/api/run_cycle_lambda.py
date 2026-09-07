@@ -1,168 +1,115 @@
-"""AWS Lambda entrypoint for one complete Traction cycle.
-
-The handler keeps the existing LangGraph workflow intact while selecting
-serverless persistence and storage through environment-aware factories.
-"""
-
-from __future__ import annotations
-
+"""Asynchronous supervisor with durable approval snapshots and real node telemetry."""
 import json
-import os
 from datetime import datetime, timezone
-from decimal import Decimal
-from typing import Any, Optional
-
-from pydantic import BaseModel, ValidationError
-
-from traction.agents.analyst import get_analyst_agent
+from pydantic import BaseModel
+from botocore.exceptions import ClientError
+from traction.api.run_manager_lambda import table, get, db, dumps, response
+from traction.config import settings
 from traction.agents.strategist import StrategistAgent
-from traction.approval.cli import AutoApprovalGate
+from traction.agents.analyst import get_analyst_agent
+from traction.agents.content import get_content_generator_agent
 from traction.graph.build import compile_traction_graph
-from traction.runtime import get_runtime_intake, get_runtime_ledger, get_runtime_profiler
-from traction.services.digest import get_digest_service
+from traction.approval.cli import AutoApprovalGate
+from traction.runtime import get_runtime_ledger
 from traction.services.execution import get_execution_service
 from traction.services.measurement import DefaultMeasurementService
-from traction.config import settings
+from traction.services.digest import get_digest_service
 from traction.schemas.founder import FounderBrief
+from traction.schemas.profile import StartupProfile
+from traction.schemas.experiment import ExperimentPlan
+from traction.constraints.budget import validate_plan_constraints
 
-try:
-    import boto3
-except ImportError:  # local tests can run without AWS SDK wiring
-    boto3 = None
+def serialize(value):
+    if isinstance(value, BaseModel):
+        return value.model_dump(mode='json')
+    if isinstance(value, dict):
+        return {k: serialize(v) for k, v in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [serialize(v) for v in value]
+    return value
 
-
-class RunCycleRequest(BaseModel):
-    startup_id: str = "ledger_ai"
-    cycle_id: int = 1
-    total_budget: float = 2000.0
-    auto_approve: bool = True
-    founder_feedback: Optional[str] = None
-    run_id: Optional[str] = None
-    founder_brief: Optional[dict[str, Any]] = None
-
-
-def _parse_event(event: Any) -> dict[str, Any]:
-    if isinstance(event, dict) and "body" in event:
-        body = event.get("body")
-        if body is None or body == "":
-            raise ValueError("request body is empty")
-        return json.loads(body) if isinstance(body, str) else body
-    if isinstance(event, str):
-        return json.loads(event)
-    if not isinstance(event, dict):
-        raise ValueError("event must be a JSON object")
-    return event
-
-
-def _response(status: int, payload: dict[str, Any]) -> dict[str, Any]:
-    return {
-        "statusCode": status,
-        "headers": {
-            "content-type": "application/json",
-            "access-control-allow-origin": "*",
-        },
-        "body": json.dumps(payload, default=str),
-    }
-
-
-def _build_graph():
-    ledger = get_runtime_ledger()
-    return compile_traction_graph(
-        ledger=ledger,
-        profiler=get_runtime_profiler(),
-        intake=get_runtime_intake(),
-        strategist_agent=StrategistAgent(),
-        analyst_agent=get_analyst_agent(),
-        approval_gate=AutoApprovalGate(),
-        execution_service=get_execution_service(),
-        measurement_service=DefaultMeasurementService(),
-        digest_service=get_digest_service(),
-    )
-
-
-def _record_run(run_id: str | None, *, status: str, event: dict[str, Any] | None = None, result: dict[str, Any] | None = None) -> None:
-    table_name = os.environ.get("RUN_TABLE_NAME")
-    if not run_id or not table_name or boto3 is None:
-        return
-    table = boto3.resource("dynamodb").Table(table_name)
-    values: dict[str, Any] = {"#status": status, "updated_at": datetime.now(timezone.utc).isoformat()}
-    names = {"#status": "status"}
-    expression = "SET #status = :status, updated_at = :updated"
-    expression_values = {":status": status, ":updated": values["updated_at"]}
+def update(run_id, fields, event=None):
+    fields = {**fields, 'updated_at': datetime.now(timezone.utc).isoformat()}
+    names = {f'#k{i}': k for i, k in enumerate(fields)}
+    values = {f':v{i}': db(serialize(v)) for i, v in enumerate(fields.values())}
+    expr = 'SET ' + ', '.join(f'#k{i}=:v{i}' for i in range(len(fields)))
     if event:
-        expression += ", events = list_append(if_not_exists(events, :empty), :events)"
-        expression_values[":empty"] = []
-        # DynamoDB does not accept Python floats in nested maps.  Convert
-        # streamed agent events recursively while preserving their shape.
-        expression_values[":events"] = [json.loads(json.dumps(event, default=str), parse_float=Decimal)]
-    if result:
-        expression += ", #result = :result"
-        names["#result"] = "result"
-        expression_values[":result"] = json.loads(json.dumps(result, default=str), parse_float=Decimal)
-    table.update_item(Key={"record_id": run_id}, UpdateExpression=expression, ExpressionAttributeNames=names, ExpressionAttributeValues=expression_values)
+        names['#events'] = 'events'
+        values[':events'] = db([event])
+        values[':empty'] = []
+        expr += ', #events=list_append(if_not_exists(#events,:empty),:events)'
+    table.update_item(Key={'record_id': run_id}, UpdateExpression=expr, ExpressionAttributeNames=names, ExpressionAttributeValues=values)
 
+def result_for(state):
+    plan = state.get('approved_plan') or state.get('proposed_plan')
+    report = state.get('analysis_report')
+    return serialize({'plan': plan, 'content_package': state.get('content_package'),
+                      'analysis_report': report, 'results': state.get('normalized_results', []),
+                      'raw_results': state.get('raw_results', []), 'digest_markdown': state.get('digest_markdown'),
+                      'learnings': state.get('recent_learnings', []), 'constraint_errors': state.get('constraint_errors', [])})
 
-def handler(event: Any, context: Any = None) -> dict[str, Any]:  # noqa: ARG001
+def handler(event, context=None):
+    # All browser operations go through the authenticated manager and its state guards.
+    if 'requestContext' in event or 'body' in event:
+        return response(409, {'error': 'Use /runs and approve the saved plan through /runs/{id}/approve'})
+    run_id, phase = event['run_id'], event['phase']
     try:
-        request = RunCycleRequest.model_validate(_parse_event(event))
-    except (ValueError, json.JSONDecodeError, ValidationError) as exc:
-        return _response(400, {"error": "invalid_request", "detail": str(exc)})
-
+        table.update_item(Key={'record_id': run_id}, UpdateExpression='SET #s=:running',
+                          ConditionExpression='#s=:queued AND phase=:phase', ExpressionAttributeNames={'#s': 'status'},
+                          ExpressionAttributeValues={':running': 'RUNNING', ':queued': 'QUEUED', ':phase': phase})
+    except ClientError as exc:
+        if exc.response['Error']['Code'] == 'ConditionalCheckFailedException':
+            return {'duplicate': True}
+        raise
+    run = get(run_id)
     try:
-        _record_run(request.run_id, status="RUNNING", event={"node": "workflow", "status": "started", "timestamp": datetime.now(timezone.utc).isoformat(), "message": "Supervisor started the LangGraph workflow."})
-        graph = _build_graph()
-        initial_state = {
-            "startup_id": request.startup_id,
-            "thread_id": f"thread_{request.startup_id}",
-            "cycle_id": request.cycle_id,
-            "iteration_count": 0,
-            "retry_count": 0,
-            "max_iterations": settings.max_graph_iterations,
-            "max_retries": settings.max_agent_retries,
-            "next_cycle_requested": False,
-            "founder_feedback": request.founder_feedback,
-            "approval_only": not request.auto_approve,
-        }
-        if request.founder_brief:
-            initial_state["founder_brief"] = FounderBrief.model_validate(request.founder_brief)
-        state: dict[str, Any] = {}
-        for update in graph.stream(initial_state):
-            for node_name, node_update in update.items():
-                if isinstance(node_update, dict):
-                    state.update(node_update)
-                node_events = node_update.get("events", []) if isinstance(node_update, dict) else []
-                event = node_events[-1] if node_events else {"node": node_name, "timestamp": datetime.now(timezone.utc).isoformat(), "message": f"{node_name} completed."}
-                _record_run(request.run_id, status="WAITING_APPROVAL" if node_name == "approval_gate" and state.get("approval_status") == "PENDING" else "RUNNING", event=event)
-        plan = state.get("approved_plan") or state.get("proposed_plan")
-        report = state.get("analysis_report")
-        verdicts = []
-        if report:
-            verdicts = [
-                {
-                    "channel": verdict.channel.value,
-                    "verdict": verdict.verdict.value,
-                    "cost_per_outcome": verdict.observed_cost_per_outcome,
-                    "reason": verdict.reasoning_summary,
-                }
-                for verdict in report.verdicts
-            ]
-        response = {
-            "startup_id": request.startup_id,
-            "cycle_id": request.cycle_id,
-            "approval_status": state.get("approval_status", "UNKNOWN"),
-            "strategy_summary": plan.strategy_summary if plan else "No plan generated",
-            "verdicts": verdicts,
-            "digest_markdown": state.get("digest_markdown", ""),
-            "events_count": len(state.get("events", [])),
-            "events": state.get("events", []),
-            "plan": plan.model_dump(mode="json") if plan else None,
-        }
-        status = "WAITING_APPROVAL" if state.get("approval_status") == "PENDING" else "COMPLETE"
-        _record_run(request.run_id, status=status, result=response)
-        return _response(200, response)
-    except Exception as exc:  # pragma: no cover - exercised in AWS runtime
-        _record_run(request.run_id, status="FAILED", event={"node": "workflow", "status": "failed", "timestamp": datetime.now(timezone.utc).isoformat(), "message": str(exc)})
-        return _response(500, {"error": "cycle_failure", "detail": str(exc)})
-
+        if phase == 'execute':
+            state = json.loads(dumps(run['checkpoint']))
+            state['founder_brief'] = FounderBrief.model_validate(state['founder_brief'])
+            state['startup_profile'] = StartupProfile.model_validate(state['startup_profile'])
+            state['proposed_plan'] = ExperimentPlan.model_validate(state['proposed_plan'])
+            valid, errors = validate_plan_constraints(state['proposed_plan'], state['founder_brief'])
+            if not valid:
+                raise ValueError('Saved plan failed validation: ' + '; '.join(errors))
+            state.update(approved_plan=state['proposed_plan'], approval_status='APPROVED', approval_only=False)
+        else:
+            state = {'startup_id': run['startup_id'], 'cycle_id': int(run['cycle_id']),
+                     'founder_brief': FounderBrief.model_validate(run['founder_brief']),
+                     'startup_profile': StartupProfile.model_validate(run['startup_profile']),
+                     'benchmark_priors': [], 'approval_only': True, 'iteration_count': 0, 'retry_count': 0,
+                     'max_iterations': settings.max_graph_iterations, 'max_retries': settings.max_agent_retries,
+                     'next_cycle_requested': False, 'founder_feedback': run.get('founder_feedback'), 'events': []}
+        def started(node):
+            update(run_id, {'current_node': node}, {'node': node, 'status': 'started',
+                   'timestamp': datetime.now(timezone.utc).isoformat(), 'message': node.replace('_', ' ') + ' started'})
+        graph = compile_traction_graph(ledger=get_runtime_ledger(), profiler=None, intake=None,
+            strategist_agent=StrategistAgent(), analyst_agent=get_analyst_agent(), approval_gate=AutoApprovalGate(),
+            execution_service=get_execution_service(seed=int(run_id[-8:].replace('-', ''), 16)),
+            measurement_service=DefaultMeasurementService(), digest_service=get_digest_service(),
+            content_agent=get_content_generator_agent(), on_node_start=started)
+        for chunk in graph.stream(state):
+            for node, changes in chunk.items():
+                state.update(changes)
+                events = changes.get('events', [])
+                detail = dict(events[-1]) if events else {}
+                detail.update(node=node, status='completed', timestamp=datetime.now(timezone.utc).isoformat())
+                detail.setdefault('message', node.replace('_', ' ') + ' completed')
+                update(run_id, {'result': result_for(state)}, detail)
+        if not state.get('plan_valid'):
+            raise ValueError('Plan could not pass validation: ' + '; '.join(state.get('constraint_errors', [])))
+        waiting = state.get('approval_status') == 'PENDING'
+        if not waiting and not state.get('digest_markdown'):
+            raise RuntimeError('Workflow stopped before producing its digest')
+        fields = {'status': 'WAITING_APPROVAL' if waiting else 'COMPLETE', 'result': result_for(state), 'current_node': None}
+        if waiting:
+            fields['checkpoint'] = serialize(state)
+        update(run_id, fields)
+        return {'run_id': run_id, 'status': fields['status']}
+    except Exception as exc:
+        import logging
+        logging.exception('Run %s failed', run_id)
+        update(run_id, {'status': 'FAILED', 'error': str(exc), 'current_node': None},
+               {'node': 'supervisor', 'status': 'failed', 'timestamp': datetime.now(timezone.utc).isoformat(), 'message': str(exc)})
+        return {'run_id': run_id, 'status': 'FAILED'}
 
 lambda_handler = handler

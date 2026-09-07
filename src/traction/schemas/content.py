@@ -25,6 +25,22 @@ class ContentFormat(str, Enum):
     FOUNDER_POST = "FOUNDER_POST"
 
 
+class GeneratedCreative(BaseModel):
+    """Only the creative decisions a language model needs to make."""
+    variant_label: str
+    headline: str
+    body: str
+    call_to_action: str
+    secondary_headlines: list[str] = Field(default_factory=list)
+    hashtags: list[str] = Field(default_factory=list)
+
+
+class GeneratedCreativePackage(BaseModel):
+    assets: list[GeneratedCreative] = Field(min_length=1)
+    targeting_notes: str
+    compliance_notes: str
+
+
 CHANNEL_FORMAT: dict[Channel, ContentFormat] = {
     Channel.GOOGLE_SEARCH: ContentFormat.SEARCH_AD,
     Channel.LINKEDIN: ContentFormat.LINKEDIN_SPONSORED,

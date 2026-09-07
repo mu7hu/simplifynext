@@ -2,6 +2,32 @@
    The Next Dollar — "Augury" UI
    Colour system per design spec
    ============================================================ */
+#authForm input { box-sizing: border-box; width:100%; padding:12px; border:1px solid var(--border); border-radius:8px; background:var(--surface); color:var(--text-primary); font:inherit; }
+.workspace-grid { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 20px; }
+.workspace-field { display: flex; flex-direction: column; gap: 8px; margin: 12px 0; font-weight: 500; }
+.workspace-field input, .workspace-field select, .workspace-field textarea, .workspace-toolbar select { width: 100%; padding: 12px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); color: var(--text-primary); font: inherit; }
+.workspace-field textarea { min-height: 100px; resize: vertical; }
+.workspace-form h2 { margin-top: 28px; }
+.workspace-form .channel-input { border: 1px solid var(--border); border-radius: 10px; margin: 16px 0; padding: 16px; display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 12px; }
+.workspace-actions { display: flex; gap: 12px; flex-wrap: wrap; margin: 20px 0; }
+.workspace-toolbar { display:flex; gap:16px; align-items:center; margin-bottom:24px; }
+.workspace-toolbar select { max-width:480px; }
+.workspace-notice { padding:16px; border-left:3px solid var(--accent); background:var(--bg); }
+.workspace-error { padding:16px; color:#b94b38; border:1px solid currentColor; border-radius:8px; margin-bottom:16px; white-space:pre-wrap; }
+.live-status { display:flex; flex-wrap:wrap; justify-content:space-between; gap:16px; margin-bottom:24px; }
+.live-status small { display:block; margin-top:8px; }
+.workspace-timeline { list-style:none; padding:0; }
+.workspace-timeline li { display:grid; grid-template-columns:180px 1fr; gap:20px; padding:18px 0; border-bottom:1px solid var(--border); }
+.workspace-timeline time { color:var(--text-secondary); font-size:12px; }
+.workspace-timeline .event-failed { color:#b94b38; }
+.preserve-lines { white-space:pre-wrap; overflow-wrap:anywhere; line-height:1.7; }
+.content-draft { padding:18px 0; border-bottom:1px solid var(--border); }
+.content-draft summary, .table summary { cursor:pointer; }
+.content-draft article { margin:20px 0; padding:16px; border:1px solid var(--border); border-radius:8px; }
+.metric-grid { grid-template-columns:repeat(3,minmax(0,1fr)); }
+.card p { line-height:1.6; }
+.card h2 { margin-bottom:14px; }
+@media(max-width:700px) { .workspace-grid,.metric-grid,.workspace-form .channel-input { grid-template-columns:1fr; } .workspace-timeline li { grid-template-columns:1fr; gap:8px; } .workspace-toolbar { flex-direction:column; align-items:stretch; } }
 :root {
   --text-primary: #384655;
   --text-secondary: #5F6E7E;

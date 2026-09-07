@@ -36,7 +36,9 @@ def compile_traction_graph(
     execution_service,
     measurement_service,
     digest_service,
-    checkpointer=None
+    checkpointer=None,
+    on_node_start=None,
+    content_agent=None,
 ):
     """Construct and compile the LangGraph StateGraph workflow for Traction."""
     workflow = StateGraph(TractionGraphState)
@@ -56,15 +58,23 @@ def compile_traction_graph(
     workflow.add_node("generate_digest", partial(node_generate_digest, digest_service=digest_service))
 
     # Edges
-    workflow.add_edge(START, "load_context")
+    workflow.add_conditional_edges(START, lambda state: "execute" if state.get("approved_plan") and state.get("approval_status") == "APPROVED" else "load_context")
     workflow.add_edge("load_context", "strategist")
     workflow.add_edge("strategist", "validate_plan")
+
+    if content_agent is not None:
+        def generate_content(state):
+            package = content_agent.generate_content(state['cycle_id'], state['proposed_plan'],
+                founder_brief=state['founder_brief'], startup_profile=state['startup_profile'])
+            return {'content_package': package.model_dump(mode='json')}
+        workflow.add_node('content', generate_content)
+        workflow.add_edge('content', 'approval_gate')
 
     workflow.add_conditional_edges(
         "validate_plan",
         route_after_validation,
         {
-            "approval_gate": "approval_gate",
+            "approval_gate": "content" if content_agent is not None else "approval_gate",
             "strategist_repair": "strategist_repair",
             END: END
         }
@@ -98,6 +108,16 @@ def compile_traction_graph(
             END: END
         }
     )
+
+    if on_node_start is not None:
+        # Wrap the registered runnable rather than guessing the next node in the UI.
+        from langchain_core.runnables import RunnableLambda
+        for name, spec in workflow.nodes.items():
+            runnable = spec.runnable
+            def report_and_invoke(state, config, name=name, runnable=runnable):
+                on_node_start(name)
+                return runnable.invoke(state, config)
+            spec.runnable = RunnableLambda(report_and_invoke)
 
     # A checkpointer is useful for resumable/streaming deployments, but a
     # plain graph invocation should also work for local scripts and tests.

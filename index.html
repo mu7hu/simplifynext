@@ -9,7 +9,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="styles.css?v=20260907-live2" />
   <script>
     // Apply the saved (or OS) theme before first paint to avoid a flash of the wrong theme
     (function () {
@@ -31,7 +31,7 @@
         <svg viewBox="0 0 24 24" fill="currentColor"><path d="M0.8 8C3.5 11.5 9 15.2 12 16 8.8 12.6 4.2 9.6 0.8 8Z"/><path d="M23.2 8C20.5 11.5 15 15.2 12 16 15.2 12.6 19.8 9.6 23.2 8Z"/></svg>
       </div>
       <div class="brand-name">Augury</div>
-      <p class="auth-kicker">LedgerAI · secure workspace</p>
+      <p class="auth-kicker">Your secure workspace</p>
       <h1 id="authTitle">Sign in to your workspace</h1>
       <p class="auth-copy" id="authCopy">Use your Cognito account to access the planning, approval and content-generation workflow.</p>
       <form id="authForm">
@@ -62,7 +62,7 @@
         </div>
         <div class="brand-text">
           <div class="brand-name">Augury</div>
-          <div class="brand-sub">LedgerAI · Cycle 4</div>
+          <div class="brand-sub">Your workspace</div>
         </div>
         <button class="sidebar-toggle" type="button" aria-label="Collapse sidebar" aria-expanded="true" title="Toggle sidebar">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m11 17-5-5 5-5"/><path d="m18 17-5-5 5-5"/></svg>
@@ -87,7 +87,7 @@
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9.5"/><path d="m8.5 12 2.5 2.5 4.5-5"/></svg>
           </span>
           <span class="nav-label">Approval</span>
-          <span class="nav-badge" id="navBadge" aria-label="1 plan awaiting approval">1</span>
+          <span class="nav-badge" id="navBadge" hidden></span>
         </a>
         <a href="#analytics" class="nav-item" data-view="analytics">
           <span class="nav-icon" aria-hidden="true">
@@ -115,12 +115,12 @@
         </button>
         <div class="footer-row">
           <span class="footer-loop">Cycle</span>
-          <span class="footer-loop-val">4 of 12</span>
+          <span class="footer-loop-val">—</span>
         </div>
-        <div class="footer-progress" role="progressbar" aria-valuemin="0" aria-valuemax="12" aria-valuenow="4" aria-label="Cycle progress" title="Cycle 4 of 12 · Evaluation windows: 14–30 days">
-          <span style="width: 33.3%"></span>
+        <div class="footer-progress" hidden>
+          <span></span>
         </div>
-        <div class="footer-cycle">Evaluation windows: 14–30 days</div>
+        <div class="footer-cycle">No cycles loaded</div>
       </div>
     </aside>
     <div class="nav-backdrop" aria-hidden="true"></div>
@@ -141,8 +141,8 @@
     <ol class="help-steps">
       <li><strong>Brief</strong> — you describe the product, budget, goal and any channels that are off-limits.</li>
       <li><strong>Plan</strong> — each cycle the agent proposes how to split the budget across channels.</li>
-      <li><strong>Approve</strong> — nothing runs until you approve. You can edit line items first.</li>
-      <li><strong>Launch &amp; Measure</strong> — channels run for their evaluation window.</li>
+      <li><strong>Approve</strong> — review the generated plan and content, or request a revision.</li>
+      <li><strong>Simulate &amp; Measure</strong> — the market simulator generates outcomes for the approved plan. No ads are published.</li>
       <li><strong>Reflect</strong> — each channel gets a verdict: SCALE, HOLD, CUT or INSUFFICIENT DATA.</li>
     </ol>
     <div class="help-legend">
@@ -162,6 +162,6 @@
       cognitoClientId: '9auv2egl12ft3suhnj6harogb'
     };
   </script>
-  <script src="app.js?v=20260907-8"></script>
+  <script src="app.js?v=20260907-live3"></script>
 </body>
 </html>

@@ -11,6 +11,11 @@ Globals:
     Environment:
       Variables:
         USE_STUB_MODELS: !Ref UseStubModels
+        BEDROCK_DEFAULT_MODEL: amazon.nova-lite-v1:0
+        BEDROCK_STRATEGIST_MODEL: amazon.nova-lite-v1:0
+        BEDROCK_ANALYST_MODEL: amazon.nova-lite-v1:0
+        BEDROCK_CONTENT_MODEL: amazon.nova-lite-v1:0
+        CONTENT_VARIANTS_PER_CHANNEL: '2'
         LEDGER_BACKEND: dynamodb
         STORAGE_BACKEND: s3
         DYNAMODB_LEDGER_TABLE: !Ref LedgerTable
@@ -22,9 +27,9 @@ Globals:
 Parameters:
   UseStubModels:
     Type: String
-    Default: 'true'
+    Default: 'false'
     AllowedValues: ['true', 'false']
-    Description: Keep true until the AWS infrastructure has passed end-to-end tests.
+    Description: Explicit offline mode. Hosted submission uses false.
 
 Conditions:
   UseBedrock: !Equals [!Ref UseStubModels, 'false']
@@ -63,6 +68,8 @@ Resources:
       CodeUri: lambda_package/
       Runtime: python3.12
       Handler: traction.api.run_cycle_lambda.handler
+      EventInvokeConfig:
+        MaximumRetryAttempts: 0
       Policies:
         - DynamoDBCrudPolicy:
             TableName: !Ref LedgerTable
@@ -101,6 +108,18 @@ Resources:
         - LambdaInvokePolicy:
             FunctionName: !Ref RunCycleFunction
       Events:
+        Workspace:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref TractionApi
+            Path: /workspace
+            Method: GET
+        RejectRun:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref TractionApi
+            Path: /runs/{run_id}/reject
+            Method: POST
         StartRun:
           Type: HttpApi
           Properties:

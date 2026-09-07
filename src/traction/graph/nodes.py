@@ -16,7 +16,7 @@ def node_load_context(state: TractionGraphState, ledger, profiler, intake) -> di
 
     brief = state.get("founder_brief") or intake.get_founder_brief(startup_id)
     profile = state.get("startup_profile") or profiler.get_startup_profile(startup_id)
-    priors = state.get("benchmark_priors") or profiler.get_benchmark_priors(startup_id)
+    priors = state["benchmark_priors"] if "benchmark_priors" in state else profiler.get_benchmark_priors(startup_id)
 
     history_summary = ledger.get_historical_summary(startup_id)
     recent_learnings = ledger.get_recent_learnings(startup_id, limit=4)
@@ -73,6 +73,13 @@ def node_strategist(state: TractionGraphState, strategist_agent, ledger) -> dict
         founder_feedback=feedback
     )
 
+    # Previous spend and cycle identity are ledger facts, never model estimates.
+    previous = {entry.channel: entry.planned_budget for entry in ledger.get_startup_history(state['startup_id'])
+                if entry.cycle_id == cycle_id - 1}
+    proposed_plan.cycle_id = cycle_id
+    for allocation in proposed_plan.allocations:
+        allocation.current_budget = previous.get(allocation.channel, 0.0)
+
     event = {
         "timestamp": datetime.utcnow().isoformat(),
         "node": "strategist",
@@ -116,6 +123,10 @@ def node_strategist_repair(state: TractionGraphState, strategist_agent) -> dict[
     retry_count = state.get("retry_count", 0) + 1
 
     repaired_plan = strategist_agent.repair_plan(invalid_plan, brief, errors)
+    repaired_plan.cycle_id = invalid_plan.cycle_id
+    previous = {a.channel: a.current_budget for a in invalid_plan.allocations}
+    for allocation in repaired_plan.allocations:
+        allocation.current_budget = previous.get(allocation.channel, 0.0)
 
     event = {
         "timestamp": datetime.utcnow().isoformat(),

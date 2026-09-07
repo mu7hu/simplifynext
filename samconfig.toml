@@ -8,7 +8,7 @@ region = "us-east-1"
 profile = "simplifynext"
 confirm_changeset = true
 capabilities = "CAPABILITY_IAM"
-parameter_overrides = "UseStubModels=\"true\""
+parameter_overrides = "UseStubModels=\"false\""
 
 [default.global.parameters]
 region = "us-east-1"

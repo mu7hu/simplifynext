@@ -60,16 +60,13 @@ def main() -> None:
         ".json": "application/json",
     }
     files = ["index.html", "app.js", "styles.css"]
-    fixture = args.project_root / "fixtures" / "content_package.fixture.json"
-    if fixture.exists():
-        files.append("fixtures/content_package.fixture.json")
     for name in files:
         path = args.project_root / name
         s3.upload_file(
             str(path),
             bucket,
             name,
-            ExtraArgs={"ContentType": content_types[path.suffix]},
+            ExtraArgs={"ContentType": content_types[path.suffix], "CacheControl": "no-cache, max-age=0, must-revalidate"},
         )
     session.client("cloudfront").create_invalidation(
         DistributionId=distribution_id,
