@@ -3,6 +3,6 @@
     "USE_STUB_MODELS": "true",
     "LEDGER_BACKEND": "sqlite",
     "STORAGE_BACKEND": "local",
-    "LEDGER_DB_PATH": "/tmp/traction-local.db"
+    "LEDGER_DB_PATH": "/tmp/augury-local.db"
   }
 }

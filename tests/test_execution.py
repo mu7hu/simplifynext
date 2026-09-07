@@ -4,12 +4,12 @@ from __future__ import annotations
 
 import pytest
 
-from traction.schemas.experiment import Channel, Allocation, ExperimentPlan
-from traction.schemas.result import RawExecutionResult
-from traction.simulator.market import MarketSimulator
-from traction.simulator.channel import ChannelSimulator
-from traction.simulator.presets import LEDGER_AI_MARKET_PRESET
-from traction.services.execution import (
+from augury.schemas.experiment import Channel, Allocation, ExperimentPlan
+from augury.schemas.result import RawExecutionResult
+from augury.simulator.market import MarketSimulator
+from augury.simulator.channel import ChannelSimulator
+from augury.simulator.presets import LEDGER_AI_MARKET_PRESET
+from augury.services.execution import (
     SimulatedExecutionService,
     MultiChannelExecutionService,
     DryRunExecutionService,

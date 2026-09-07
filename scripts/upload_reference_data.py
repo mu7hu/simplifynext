@@ -1,4 +1,4 @@
-"""Upload bundled reference JSON data to the deployed Traction data bucket."""
+"""Upload bundled reference JSON data to the deployed Augury data bucket."""
 
 from __future__ import annotations
 

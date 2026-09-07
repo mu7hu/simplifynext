@@ -13,9 +13,9 @@ import sys
 import textwrap
 from pathlib import Path
 
-from traction.api.analyst_lambda import handler
-from traction.schemas.analysis import AnalysisReport, Verdict
-from traction.schemas.experiment import Channel
+from augury.api.analyst_lambda import handler
+from augury.schemas.analysis import AnalysisReport, Verdict
+from augury.schemas.experiment import Channel
 
 from tests._analyst_fixtures import payload_dict
 
@@ -73,17 +73,17 @@ def test_handler_missing_plan_returns_422():
 
 def test_lambda_has_no_graph_coupling_at_call_time():
     """Import ONLY the lambda module in a fresh interpreter, invoke it, and assert
-    that no traction.graph / langgraph module was pulled in."""
+    that no augury.graph / langgraph module was pulled in."""
     payload_path = REPO_ROOT / "data" / "sample_analyst_payload.json"
     script = textwrap.dedent(
         f"""
         import json, sys
         sys.path.insert(0, {str(REPO_ROOT / "src")!r})
-        from traction.api.analyst_lambda import handler
+        from augury.api.analyst_lambda import handler
         payload = json.load(open({str(payload_path)!r}))
         resp = handler({{"body": json.dumps(payload)}}, None)
         assert resp["statusCode"] == 200, resp
-        leaked = sorted(m for m in sys.modules if m == "traction.graph" or m.startswith("traction.graph.") or m == "langgraph" or m.startswith("langgraph."))
+        leaked = sorted(m for m in sys.modules if m == "augury.graph" or m.startswith("augury.graph.") or m == "langgraph" or m.startswith("langgraph."))
         assert not leaked, f"graph/orchestration modules leaked into the lambda runtime: {{leaked}}"
         print("OK")
         """

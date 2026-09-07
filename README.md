@@ -1,9 +1,9 @@
-# Traction: Autonomous Marketing Portfolio Agent
+# Augury: Autonomous Marketing Portfolio Agent
 
 > **SimplifyNext IGNITE Agentic AI Hackathon 2026 Submission**  
 > *"Where should the next marketing dollar go?"*
 
-Traction is an autonomous cross-channel marketing experimentation and budget allocation system designed for early-stage startup founders. Rather than generating generic social copy or acting as a chatbot, Traction manages a startup's marketing budget like a **venture portfolio of empirical experiments**—balancing exploitation of proven channels with exploration of high-potential channels under noisy, delayed market signals.
+Augury is an autonomous cross-channel marketing experimentation and budget allocation system designed for early-stage startup founders. Rather than generating generic social copy or acting as a chatbot, Augury manages a startup's marketing budget like a **venture portfolio of empirical experiments**—balancing exploitation of proven channels with exploration of high-potential channels under noisy, delayed market signals.
 
 ---
 
@@ -53,7 +53,7 @@ Traction is an autonomous cross-channel marketing experimentation and budget all
 | Component | Nature | Technology | Justification |
 | :--- | :--- | :--- | :--- |
 | **Strategist Agent** | LLM Reasoning | Bedrock Claude Sonnet / Haiku | Formulates falsifiable hypotheses, weighs soft priors against empirical evidence, and articulates reallocation rationales. |
-| **Analyst Agent** | LLM Reasoning | Bedrock Claude Sonnet / Haiku | Diagnostic reasoning across multi-channel funnels, attribution warnings, and persistent learning extraction. |
+| **Analyst Agent** | LLM Reasoning | Bedrock Claude Sonnet / Haiku | Diagnostic reasoning across multi-channel funnels, attribution warnings, and persistent learning exaugury. |
 | **Constraint Engine** | Deterministic | Pure Python | Mathematical exactness: total budget sum verification ($0.01 tolerance), micro-cent rebalancing, and hard exclusion enforcement. |
 | **Market Simulator** | Deterministic | Python + Seeded RNG | Realistic, noisy market environment with diminishing returns, saturation curves, and response delays. |
 | **Experiment Ledger** | Deterministic | SQLite + JSON | ACID-compliant, persistent organizational memory across cycles. |
@@ -63,7 +63,7 @@ Traction is an autonomous cross-channel marketing experimentation and budget all
 
 ## Hackathon Digital AI Agent Metrics (Workshop Slide 22)
 
-Traction's evaluation harness explicitly tracks and reports the official 6 Digital AI Agent performance metrics:
+Augury's evaluation harness explicitly tracks and reports the official 6 Digital AI Agent performance metrics:
 1. **Schema Validation Pass Rate**: 100% on first attempt using Pydantic v2 structured outputs.
 2. **Tool-Call / Step Success Rate**: 100% across all simulation, measurement, and persistence nodes.
 3. **Task Completion Rate**: 100% end-to-end autonomous cycle completion.
@@ -123,7 +123,7 @@ python scripts/run_cycle.py --startup-id ledger_ai --cycle-id 1 --budget 2000
 ```
 
 ### 3. Run the Comparative Evaluation Benchmark
-Compares Traction against **Equal Split**, **Founder Split**, **Greedy Last-Winner**, and **Oracle** across 12 cycles:
+Compares Augury against **Equal Split**, **Founder Split**, **Greedy Last-Winner**, and **Oracle** across 12 cycles:
 ```bash
 python scripts/run_evaluation.py --startups 5 --cycles 12
 ```
@@ -137,9 +137,9 @@ pytest tests/ -v
 ---
 
 ## Bedrock AgentCore Deployment
-Traction exposes an `@app.entrypoint` runtime handler in `src/traction/api/agentcore_app.py`, fully compliant with AWS Bedrock AgentCore serving and local HTTP testing:
+Augury exposes an `@app.entrypoint` runtime handler in `src/augury/api/agentcore_app.py`, fully compliant with AWS Bedrock AgentCore serving and local HTTP testing:
 ```python
-from traction.api.agentcore_app import entrypoint
+from augury.api.agentcore_app import entrypoint
 
 response = entrypoint({
     "startup_id": "ledger_ai",
@@ -232,7 +232,7 @@ approved.
 
 ## AnalystAgent as a Standalone Service
 
-The `AnalystAgent` (`src/traction/agents/analyst.py`) is independently deployable —
+The `AnalystAgent` (`src/augury/agents/analyst.py`) is independently deployable —
 it needs no graph, no orchestration state, and no other agent at runtime.
 
 - `BedrockAnalystAgent` — production agent. Reasoning runs on **Amazon Bedrock**
@@ -257,7 +257,7 @@ The payload is `{ "cycle_id", "plan", "results", "benchmark_priors" }` — see
 
 ### AWS Lambda (Function URL, no API Gateway)
 
-Handler: `traction.api.analyst_lambda.handler` (alias `lambda_handler`). Deploy as
+Handler: `augury.api.analyst_lambda.handler` (alias `lambda_handler`). Deploy as
 its own Lambda with a Function URL. Standard AWS credential resolution (env vars /
 profile / role) via boto3 — no keys are prompted for.
 
@@ -269,13 +269,13 @@ curl -sS -X POST "$ANALYST_FUNCTION_URL" \
 
 Returns the `AnalysisReport` as JSON (`200`), a schema-validation report (`422`),
 or an error payload (`400` malformed JSON / `500` unexpected). It imports nothing
-from `traction.graph` — verified by `tests/test_analyst_lambda.py`.
+from `augury.graph` — verified by `tests/test_analyst_lambda.py`.
 
 ---
 
 ## MeasurementService (normalization)
 
-`DefaultMeasurementService.normalize_results` (`src/traction/services/measurement.py`)
+`DefaultMeasurementService.normalize_results` (`src/augury/services/measurement.py`)
 turns per-channel `RawExecutionResult` telemetry into comparable
 `ExperimentResult` objects — observed CAC (`spend / outcomes`, rounded; `= spend`
 when zero outcomes), conversion rate, CTR, observed days, and
@@ -290,7 +290,7 @@ and `benchmark_cac_median` / `benchmark_cac_ratio` vs the industry prior.
 
 ## Founder Intake
 
-`src/traction/services/intake.py` turns onboarding answers into a validated
+`src/augury/services/intake.py` turns onboarding answers into a validated
 `FounderBrief` with no strategist/graph changes:
 
 - `FileIntakeProvider` — production default. Reads `data/founder_briefs/<startup_id>.json`
@@ -308,8 +308,8 @@ and `benchmark_cac_median` / `benchmark_cac_ratio` vs the industry prior.
 
 ## Startup Profiler & Benchmark Priors
 
-`src/traction/services/profiler.py` — deterministic, traceable, and free of any
-`traction.simulator` import (no ground-truth leakage):
+`src/augury/services/profiler.py` — deterministic, traceable, and free of any
+`augury.simulator` import (no ground-truth leakage):
 
 - `FileProfilerService` — production default. Profile from
   `data/example_profiles/<startup_id>.json`; priors from
@@ -324,7 +324,7 @@ and `benchmark_cac_median` / `benchmark_cac_ratio` vs the industry prior.
 
 ## Execution Adapters
 
-`src/traction/services/execution.py` keeps a fixed boundary —
+`src/augury/services/execution.py` keeps a fixed boundary —
 `execute_plan(plan) -> list[RawExecutionResult]`, one row per allocation, no
 oracle parameters, no approval decisions:
 
@@ -346,7 +346,7 @@ oracle parameters, no approval decisions:
 
 ## Founder Digest
 
-`src/traction/services/digest.py` —
+`src/augury/services/digest.py` —
 `generate_digest(plan, results, report, learnings) -> str`, a communication
 artifact only (it never sets allocations, and says so):
 
@@ -364,9 +364,9 @@ artifact only (it never sets allocations, and says so):
 
 ## Content Generator Agent
 
-`src/traction/agents/content.py` turns an approved `ExperimentPlan` /
+`src/augury/agents/content.py` turns an approved `ExperimentPlan` /
 `Allocation` into draft channel creative — it only reads plan data and emits a
-`ContentPackage` (`src/traction/schemas/content.py`), never budgets or graph state.
+`ContentPackage` (`src/augury/schemas/content.py`), never budgets or graph state.
 
 - `BedrockContentGeneratorAgent` — Amazon Bedrock (cheap model by default,
   `BEDROCK_CONTENT_MODEL`) with a deterministic template engine as the offline /
@@ -386,7 +386,7 @@ python scripts/run_content.py data/sample_content_payload.json --pretty
 curl -sS -X POST "$CONTENT_FUNCTION_URL" -H 'content-type: application/json' --data @data/sample_content_payload.json
 ```
 
-Lambda handler: `traction.api.content_lambda.handler` (alias `lambda_handler`),
+Lambda handler: `augury.api.content_lambda.handler` (alias `lambda_handler`),
 Function URL, `200` / `422` / `400` / `500`, **zero graph imports** (verified by
 `tests/test_content_lambda.py`). Payload:
 `{ cycle_id, plan, startup_profile?, founder_brief?, only_channels?, variants? }`.
@@ -403,14 +403,13 @@ Function URL, `200` / `422` / `400` / `500`, **zero graph imports** (verified by
 
 ## Frontend Web App
 
-The merged frontend is a dependency-free static web app for the Traction founder experience:
+The merged frontend is a dependency-free static web app for the Augury founder experience:
 
 | File | Purpose |
 |---|---|
 | `index.html` | Application shell and navigation |
 | `styles.css` | Visual design system and responsive layout |
 | `app.js` | Views, sample LedgerAI data, routing, and interactions |
-| `next-dollar-figma-prompt.md` | UI design specification |
 
 Run it locally with:
 

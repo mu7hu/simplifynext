@@ -29,11 +29,11 @@ import sys
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "src")))
 
-from traction.api.content_lambda import generate_from_payload  # noqa: E402
+from augury.api.content_lambda import generate_from_payload  # noqa: E402
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Run the Traction Content Generator Agent on a JSON payload.")
+    parser = argparse.ArgumentParser(description="Run the Augury Content Generator Agent on a JSON payload.")
     parser.add_argument("payload", help="Path to a JSON file with cycle_id / plan / (optional) context")
     parser.add_argument("--pretty", action="store_true", help="Indent the JSON output")
     args = parser.parse_args()

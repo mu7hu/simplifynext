@@ -8,9 +8,9 @@ import sys
 import textwrap
 from pathlib import Path
 
-from traction.api.content_lambda import handler
-from traction.schemas.content import ContentPackage
-from traction.schemas.experiment import Channel
+from augury.api.content_lambda import handler
+from augury.schemas.content import ContentPackage
+from augury.schemas.experiment import Channel
 
 from tests._analyst_fixtures import sample_plan
 
@@ -65,11 +65,11 @@ def test_content_lambda_has_no_graph_coupling_at_call_time():
         f"""
         import json, sys
         sys.path.insert(0, {str(REPO_ROOT / "src")!r})
-        from traction.api.content_lambda import handler
+        from augury.api.content_lambda import handler
         payload = json.load(open({str(payload_path)!r}))
         resp = handler({{"body": json.dumps(payload)}}, None)
         assert resp["statusCode"] == 200, resp
-        leaked = sorted(m for m in sys.modules if m == "traction.graph" or m.startswith("traction.graph.")
+        leaked = sorted(m for m in sys.modules if m == "augury.graph" or m.startswith("augury.graph.")
                         or m == "langgraph" or m.startswith("langgraph."))
         assert not leaked, f"graph modules leaked into the content lambda runtime: {{leaked}}"
         print("OK")

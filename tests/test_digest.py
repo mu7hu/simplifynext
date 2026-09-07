@@ -2,10 +2,10 @@
 
 from __future__ import annotations
 
-from traction.agents.analyst import BedrockAnalystAgent
-from traction.schemas.analysis import AnalysisReport, ExperimentVerdict, Verdict
-from traction.schemas.experiment import Channel
-from traction.services.digest import (
+from augury.agents.analyst import BedrockAnalystAgent
+from augury.schemas.analysis import AnalysisReport, ExperimentVerdict, Verdict
+from augury.schemas.experiment import Channel
+from augury.services.digest import (
     MarkdownDigestService,
     PlainTextDigestService,
     get_digest_service,
@@ -32,7 +32,7 @@ def test_markdown_digest_explains_outcomes_verdicts_and_movement():
 
     # Structure
     for header in (
-        "# Traction Weekly Portfolio Digest — Cycle 2",
+        "# Augury Weekly Portfolio Digest — Cycle 2",
         "## Executive summary",
         "## What happened this cycle",
         "## Verdicts & why",
@@ -98,7 +98,7 @@ def test_empty_results_do_not_crash():
 def test_plain_text_digest_has_no_markup_but_same_substance():
     txt = PlainTextDigestService().generate_digest(sample_plan(), sample_results_mixed(), _report(), LEARNINGS)
     assert "|" not in txt and "##" not in txt and "# " not in txt
-    assert "TRACTION WEEKLY DIGEST - CYCLE 2" in txt
+    assert "AUGURY WEEKLY DIGEST - CYCLE 2" in txt
     assert "deterministic budget engine" in txt
     for v in _report().verdicts:
         assert v.channel.value in txt

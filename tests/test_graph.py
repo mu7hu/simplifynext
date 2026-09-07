@@ -1,16 +1,16 @@
 """Unit tests for end-to-end LangGraph supervisor workflow."""
 
-from traction.services.intake import MockIntakeProvider
-from traction.services.profiler import MockProfilerService
-from traction.services.execution import SimulatedExecutionService
-from traction.services.measurement import DefaultMeasurementService
-from traction.services.digest import MarkdownDigestService
-from traction.simulator.market import MarketSimulator
-from traction.ledger.sqlite import SQLiteExperimentLedger
-from traction.agents.strategist import StrategistAgent
-from traction.agents.analyst import StubAnalystAgent
-from traction.approval.cli import AutoApprovalGate
-from traction.graph.build import compile_traction_graph
+from augury.services.intake import MockIntakeProvider
+from augury.services.profiler import MockProfilerService
+from augury.services.execution import SimulatedExecutionService
+from augury.services.measurement import DefaultMeasurementService
+from augury.services.digest import MarkdownDigestService
+from augury.simulator.market import MarketSimulator
+from augury.ledger.sqlite import SQLiteExperimentLedger
+from augury.agents.strategist import StrategistAgent
+from augury.agents.analyst import StubAnalystAgent
+from augury.approval.cli import AutoApprovalGate
+from augury.graph.build import compile_augury_graph
 
 
 def test_graph_end_to_end_cycle(tmp_path):
@@ -26,7 +26,7 @@ def test_graph_end_to_end_cycle(tmp_path):
     analyst = StubAnalystAgent()
     approval_gate = AutoApprovalGate()
 
-    graph = compile_traction_graph(
+    graph = compile_augury_graph(
         ledger=ledger,
         profiler=profiler,
         intake=intake,

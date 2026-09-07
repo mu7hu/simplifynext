@@ -1,7 +1,7 @@
-# Traction: System Architecture
+# Augury: System Architecture
 
 ## Overview
-Traction is an autonomous cross-channel marketing experimentation and budget allocation system designed for early-stage founders. Rather than generating ad copy or marketing fluff, Traction treats a startup's marketing budget as a venture portfolio of empirical experiments under market noise and conversion latency.
+Augury is an autonomous cross-channel marketing experimentation and budget allocation system designed for early-stage founders. Rather than generating ad copy or marketing fluff, Augury treats a startup's marketing budget as a venture portfolio of empirical experiments under market noise and conversion latency.
 
 ```
                     ┌────────────────────────┐

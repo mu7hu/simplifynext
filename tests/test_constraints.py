@@ -1,15 +1,15 @@
 """Unit tests for deterministic budget constraints and policies."""
 
-from traction.schemas.experiment import Channel, Allocation, ExperimentPlan
-from traction.schemas.founder import FounderBrief, PrimaryGoal, ExclusionRule
-from traction.constraints.budget import (
+from augury.schemas.experiment import Channel, Allocation, ExperimentPlan
+from augury.schemas.founder import FounderBrief, PrimaryGoal, ExclusionRule
+from augury.constraints.budget import (
     validate_budget_sum,
     rebalance_micro_cents,
     validate_hard_constraints,
     validate_no_negative_spending,
     validate_plan_constraints,
 )
-from traction.constraints.policies import ExploreExploitPolicy
+from augury.constraints.policies import ExploreExploitPolicy
 
 
 def _make_sample_plan(b1: float, b2: float) -> ExperimentPlan:

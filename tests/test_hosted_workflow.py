@@ -14,9 +14,9 @@ def hosted(monkeypatch, tmp_path):
     with mock_aws():
         table = boto3.resource('dynamodb', region_name='us-east-1').create_table(TableName='runs-test',
             KeySchema=[{'AttributeName':'record_id','KeyType':'HASH'}], AttributeDefinitions=[{'AttributeName':'record_id','AttributeType':'S'}], BillingMode='PAY_PER_REQUEST')
-        from traction.api import run_manager_lambda as manager, run_cycle_lambda as worker
-        from traction.ledger.sqlite import SQLiteExperimentLedger
-        from traction.config import settings
+        from augury.api import run_manager_lambda as manager, run_cycle_lambda as worker
+        from augury.ledger.sqlite import SQLiteExperimentLedger
+        from augury.config import settings
         monkeypatch.setattr(settings, 'use_stub_models', True)
         monkeypatch.setattr(manager, 'table', table)
         monkeypatch.setattr(worker, 'table', table)
@@ -30,7 +30,7 @@ def call(manager, method, path, body=None, owner='founder-a'):
     return response['statusCode'], json.loads(response['body'])
 
 def save(manager):
-    from traction.services.intake import _ledger_ai_brief
+    from augury.services.intake import _ledger_ai_brief
     brief=_ledger_ai_brief().model_dump(mode='json')
     brief['total_budget']=2000.25
     profile={'stage':'SEED','sector':'B2B_SAAS','target_acv':1234.56,'sales_cycle_days':30}
@@ -62,7 +62,7 @@ def test_approval_resumes_identical_plan_without_replanning(hosted, monkeypatch)
     plan=saved['result']['plan']
     assert saved['result']['content_package']['items']
     assert any(e['node']=='strategist' and e['status']=='started' for e in saved['events'])
-    from traction.agents.strategist import StrategistAgent
+    from augury.agents.strategist import StrategistAgent
     monkeypatch.setattr(StrategistAgent,'plan_cycle',Mock(side_effect=AssertionError('Approved plan must never be regenerated')))
     assert call(manager,'POST','/runs/'+run_id+'/approve')[0]==202
     assert call(manager,'POST','/runs/'+run_id+'/approve')[0]==409
@@ -77,7 +77,7 @@ def test_invalid_plan_reports_failure(hosted, monkeypatch):
     manager, worker=hosted
     save(manager)
     run=call(manager,'POST','/runs',{'request_id':str(uuid.uuid4())})[1]
-    from traction.agents.strategist import StrategistAgent
+    from augury.agents.strategist import StrategistAgent
     monkeypatch.setattr(StrategistAgent,'plan_cycle',Mock(side_effect=RuntimeError('Bedrock unavailable')))
     assert worker.handler({'run_id':run['run_id'],'phase':'plan'})['status']=='FAILED'
     data=call(manager,'GET','/runs/'+run['run_id'])[1]

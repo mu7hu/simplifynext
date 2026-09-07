@@ -137,7 +137,7 @@ function renderBrief() {
   const b = state.workspace.brief || {}, p = state.workspace.profile || {}, g = b.primary_goal || {};
   return `<div class="content-wrap"><header class="page-head"><div class="page-eyebrow"><span class="dot"></span>Step 1 · Brief</div><h1 class="page-title">Founder Brief</h1><p class="page-sub">This brief guides every decision the agents make. Update it before starting a new cycle.</p></header><form id="briefForm" class="workspace-form"><section class="card card-accent"><div class="card-title-row"><span class="title-icon">${icon('users')}</span><h2 class="card-title">Startup</h2></div><div class="workspace-grid">
     ${field('startup_name','Company name',b.startup_name || '', 'text', '', 'The startup or company running this marketing experiment.')}
-    ${select('stage','Stage',['PRE_SEED','SEED','SERIES_A'],p.stage,'The company’s business maturity: Pre-seed is idea validation, Seed is early traction, and Series A is scaling.')}
+    ${select('stage','Stage',['PRE_SEED','SEED','SERIES_A'],p.stage,'The company’s business maturity: Pre-seed is idea validation, Seed is early augury, and Series A is scaling.')}
     ${select('sector','Sector',['B2B_SAAS','B2C_SUBSCRIPTION','MARKETPLACE','DEVTOOLS'],p.sector,'The broad business model used to guide relevant marketing assumptions and benchmarks.')}
     ${field('target_acv','Annual customer value (S$)',p.target_acv || '', 'number','min="0.01" step="0.01"','The expected revenue from one customer in a year.')}
     ${field('sales_cycle_days','Typical sales cycle (days)',p.sales_cycle_days || '', 'number','min="1" step="1"','The usual number of days from first contact to becoming a customer.')}

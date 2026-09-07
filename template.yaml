@@ -1,6 +1,6 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
-Description: SimplifyNext Traction serverless application
+Description: SimplifyNext Augury serverless application
 
 Globals:
   Function:
@@ -35,7 +35,7 @@ Conditions:
   UseBedrock: !Equals [!Ref UseStubModels, 'false']
 
 Resources:
-  TractionApi:
+  AuguryApi:
     Type: AWS::Serverless::HttpApi
     Properties:
       Auth:
@@ -67,7 +67,7 @@ Resources:
     Properties:
       CodeUri: lambda_package/
       Runtime: python3.12
-      Handler: traction.api.run_cycle_lambda.handler
+      Handler: augury.api.run_cycle_lambda.handler
       EventInvokeConfig:
         MaximumRetryAttempts: 0
       Policies:
@@ -89,7 +89,7 @@ Resources:
         RunCycle:
           Type: HttpApi
           Properties:
-            ApiId: !Ref TractionApi
+            ApiId: !Ref AuguryApi
             Path: /run-cycle
             Method: POST
 
@@ -98,7 +98,7 @@ Resources:
     Properties:
       CodeUri: lambda_package/
       Runtime: python3.12
-      Handler: traction.api.run_manager_lambda.handler
+      Handler: augury.api.run_manager_lambda.handler
       Environment:
         Variables:
           RUN_CYCLE_FUNCTION_NAME: !Ref RunCycleFunction
@@ -111,49 +111,49 @@ Resources:
         Workspace:
           Type: HttpApi
           Properties:
-            ApiId: !Ref TractionApi
+            ApiId: !Ref AuguryApi
             Path: /workspace
             Method: GET
         RejectRun:
           Type: HttpApi
           Properties:
-            ApiId: !Ref TractionApi
+            ApiId: !Ref AuguryApi
             Path: /runs/{run_id}/reject
             Method: POST
         StartRun:
           Type: HttpApi
           Properties:
-            ApiId: !Ref TractionApi
+            ApiId: !Ref AuguryApi
             Path: /runs
             Method: POST
         GetRun:
           Type: HttpApi
           Properties:
-            ApiId: !Ref TractionApi
+            ApiId: !Ref AuguryApi
             Path: /runs/{run_id}
             Method: GET
         GetRunEvents:
           Type: HttpApi
           Properties:
-            ApiId: !Ref TractionApi
+            ApiId: !Ref AuguryApi
             Path: /runs/{run_id}/events
             Method: GET
         ApproveRun:
           Type: HttpApi
           Properties:
-            ApiId: !Ref TractionApi
+            ApiId: !Ref AuguryApi
             Path: /runs/{run_id}/approve
             Method: POST
         SaveBrief:
           Type: HttpApi
           Properties:
-            ApiId: !Ref TractionApi
+            ApiId: !Ref AuguryApi
             Path: /briefs/{startup_id}
             Method: PUT
         GetBrief:
           Type: HttpApi
           Properties:
-            ApiId: !Ref TractionApi
+            ApiId: !Ref AuguryApi
             Path: /briefs/{startup_id}
             Method: GET
 
@@ -162,7 +162,7 @@ Resources:
     Properties:
       CodeUri: lambda_package/
       Runtime: python3.12
-      Handler: traction.api.analyst_lambda.handler
+      Handler: augury.api.analyst_lambda.handler
       Policies:
         - !If
           - UseBedrock
@@ -176,7 +176,7 @@ Resources:
         Analyst:
           Type: HttpApi
           Properties:
-            ApiId: !Ref TractionApi
+            ApiId: !Ref AuguryApi
             Path: /analyst
             Method: POST
 
@@ -185,7 +185,7 @@ Resources:
     Properties:
       CodeUri: lambda_package/
       Runtime: python3.12
-      Handler: traction.api.content_lambda.handler
+      Handler: augury.api.content_lambda.handler
       Policies:
         - !If
           - UseBedrock
@@ -199,7 +199,7 @@ Resources:
         Content:
           Type: HttpApi
           Properties:
-            ApiId: !Ref TractionApi
+            ApiId: !Ref AuguryApi
             Path: /content
             Method: POST
 
@@ -275,7 +275,7 @@ Resources:
 Outputs:
   ApiUrl:
     Description: HTTP API base URL
-    Value: !Sub 'https://${TractionApi}.execute-api.${AWS::Region}.amazonaws.com'
+    Value: !Sub 'https://${AuguryApi}.execute-api.${AWS::Region}.amazonaws.com'
   LedgerTableName:
     Value: !Ref LedgerTable
   RunTableName:

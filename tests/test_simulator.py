@@ -1,7 +1,7 @@
 """Unit tests for market simulator and ground-truth encapsulation."""
 
-from traction.schemas.experiment import Channel, Allocation, ExperimentPlan
-from traction.simulator.market import MarketSimulator
+from augury.schemas.experiment import Channel, Allocation, ExperimentPlan
+from augury.simulator.market import MarketSimulator
 
 
 def test_simulator_determinism():

@@ -5,12 +5,12 @@ import sys
 import os
 sys.path.insert(0, os.path.abspath("src"))
 
-from traction.config import settings
-from traction.api.agentcore_app import entrypoint
+from augury.config import settings
+from augury.api.agentcore_app import entrypoint
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Run a single Traction cycle.")
+    parser = argparse.ArgumentParser(description="Run a single Augury cycle.")
     parser.add_argument("--startup-id", default="ledger_ai", help="Startup identifier")
     parser.add_argument("--cycle-id", type=int, default=1, help="Cycle number to run")
     parser.add_argument("--budget", type=float, default=2000.0, help="Cycle budget")

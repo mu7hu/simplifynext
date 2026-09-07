@@ -1,10 +1,10 @@
 """Unit tests for Strategist Agent portfolio generation and bounded repair."""
 
-from traction.agents.strategist import StrategistAgent
-from traction.services.intake import MockIntakeProvider
-from traction.services.profiler import MockProfilerService
-from traction.schemas.ledger import HistoricalSummary
-from traction.constraints.budget import validate_budget_sum
+from augury.agents.strategist import StrategistAgent
+from augury.services.intake import MockIntakeProvider
+from augury.services.profiler import MockProfilerService
+from augury.schemas.ledger import HistoricalSummary
+from augury.constraints.budget import validate_budget_sum
 
 
 def test_strategist_plan_cycle_1():

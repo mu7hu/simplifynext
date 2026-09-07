@@ -6,8 +6,8 @@ import json
 
 import pytest
 
-from traction.schemas.profile import StartupProfile, BenchmarkPrior, StartupStage, IndustrySector
-from traction.services.profiler import (
+from augury.schemas.profile import StartupProfile, BenchmarkPrior, StartupStage, IndustrySector
+from augury.services.profiler import (
     FileProfilerService,
     DictProfilerService,
     MockProfilerService,
@@ -118,9 +118,9 @@ def test_get_profiler_service_factory(tmp_path):
 
 def test_profiler_does_not_import_simulator_ground_truth():
     """Profiler output must not carry hidden simulator ground truth — the module
-    must not import from traction.simulator at all."""
+    must not import from augury.simulator at all."""
     import ast
-    import traction.services.profiler as prof_mod
+    import augury.services.profiler as prof_mod
 
     tree = ast.parse(open(prof_mod.__file__, encoding="utf-8").read())
     imported: list[str] = []
@@ -129,7 +129,7 @@ def test_profiler_does_not_import_simulator_ground_truth():
             imported += [a.name for a in node.names]
         elif isinstance(node, ast.ImportFrom):
             imported.append(node.module or "")
-    assert not any(m.startswith("traction.simulator") for m in imported), imported
+    assert not any(m.startswith("augury.simulator") for m in imported), imported
     assert "ChannelGroundTruth" not in imported
 
     # The output schemas carry no hidden ground-truth physics parameters.

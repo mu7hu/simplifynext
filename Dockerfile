@@ -9,4 +9,4 @@ COPY data ${LAMBDA_TASK_ROOT}/data
 ENV PYTHONPATH=${LAMBDA_TASK_ROOT}/src
 
 # SAM overrides this command for the Analyst and Content functions.
-CMD ["traction.api.run_cycle_lambda.handler"]
+CMD ["augury.api.run_cycle_lambda.handler"]

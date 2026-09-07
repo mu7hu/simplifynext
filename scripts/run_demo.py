@@ -10,24 +10,24 @@ from rich.text import Text
 # Ensure src is in python path
 sys.path.insert(0, os.path.abspath("src"))
 
-from traction.config import settings
-from traction.services.intake import get_intake_provider
-from traction.services.profiler import get_profiler_service
-from traction.services.execution import get_execution_service
-from traction.services.measurement import DefaultMeasurementService
-from traction.services.digest import get_digest_service
-from traction.simulator.market import MarketSimulator
-from traction.ledger.sqlite import SQLiteExperimentLedger
-from traction.agents.strategist import StrategistAgent
-from traction.agents.analyst import get_analyst_agent
-from traction.approval.cli import AutoApprovalGate
-from traction.graph.build import compile_traction_graph
+from augury.config import settings
+from augury.services.intake import get_intake_provider
+from augury.services.profiler import get_profiler_service
+from augury.services.execution import get_execution_service
+from augury.services.measurement import DefaultMeasurementService
+from augury.services.digest import get_digest_service
+from augury.simulator.market import MarketSimulator
+from augury.ledger.sqlite import SQLiteExperimentLedger
+from augury.agents.strategist import StrategistAgent
+from augury.agents.analyst import get_analyst_agent
+from augury.approval.cli import AutoApprovalGate
+from augury.graph.build import compile_augury_graph
 
 
 def run_demo():
     console = Console()
     console.print(Panel.fit(
-        "[bold cyan]TRACTION: AUTONOMOUS MARKETING PORTFOLIO AGENT[/bold cyan]\n"
+        "[bold cyan]AUGURY: AUTONOMOUS MARKETING PORTFOLIO AGENT[/bold cyan]\n"
         "[white]SimplifyNext IGNITE Agentic AI Hackathon 2026 Submission[/white]\n\n"
         "[yellow]Target User:[/yellow] Solo B2B SaaS Founder (LedgerAI, Seed Stage)\n"
         "[yellow]Budget:[/yellow] $2,000 / cycle | [yellow]Goal:[/yellow] Qualified Demo Bookings (Target CAC: $350)\n"
@@ -36,7 +36,7 @@ def run_demo():
     ))
 
     # Initialize components
-    db_path = "data/demo_traction.db"
+    db_path = "data/demo_augury.db"
     if os.path.exists(db_path):
         os.remove(db_path)
 
@@ -50,7 +50,7 @@ def run_demo():
     analyst = get_analyst_agent()
     approval_gate = AutoApprovalGate()
 
-    graph = compile_traction_graph(
+    graph = compile_augury_graph(
         ledger=ledger,
         profiler=profiler,
         intake=intake,
@@ -160,7 +160,7 @@ def run_demo():
     comp_table.add_row("Blended CAC", f"${c1['blended_cac']:.2f}", f"${c3['blended_cac']:.2f}", f"${c5['blended_cac']:.2f}")
 
     console.print(comp_table)
-    console.print("\n[bold green]Demo completed successfully! Persistent ledger saved in data/demo_traction.db[/bold green]\n")
+    console.print("\n[bold green]Demo completed successfully! Persistent ledger saved in data/demo_augury.db[/bold green]\n")
 
 
 if __name__ == "__main__":

@@ -2,11 +2,11 @@
 
 import pytest
 from pydantic import ValidationError
-from traction.schemas.founder import FounderBrief, PrimaryGoal, GoalType, ExclusionRule, ChannelPreference
-from traction.schemas.experiment import Channel, Allocation, ExperimentPlan
-from traction.schemas.result import RawExecutionResult, ExperimentResult
-from traction.schemas.analysis import Verdict, ExperimentVerdict, AnalysisReport
-from traction.schemas.ledger import LedgerEntry
+from augury.schemas.founder import FounderBrief, PrimaryGoal, GoalType, ExclusionRule, ChannelPreference
+from augury.schemas.experiment import Channel, Allocation, ExperimentPlan
+from augury.schemas.result import RawExecutionResult, ExperimentResult
+from augury.schemas.analysis import Verdict, ExperimentVerdict, AnalysisReport
+from augury.schemas.ledger import LedgerEntry
 
 
 def test_channel_enum():

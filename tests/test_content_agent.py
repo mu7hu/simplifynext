@@ -2,16 +2,16 @@
 
 from __future__ import annotations
 
-from traction.agents.content import BedrockContentGeneratorAgent, get_content_generator_agent
-from traction.schemas.content import (
+from augury.agents.content import BedrockContentGeneratorAgent, get_content_generator_agent
+from augury.schemas.content import (
     ContentPackage,
     ChannelContent,
     ContentAsset,
     ContentFormat,
     CHANNEL_FORMAT,
 )
-from traction.schemas.experiment import Channel
-from traction.services.intake import MockIntakeProvider
+from augury.schemas.experiment import Channel
+from augury.services.intake import MockIntakeProvider
 
 from tests._analyst_fixtures import sample_plan
 

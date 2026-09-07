@@ -8,9 +8,9 @@ from __future__ import annotations
 
 import pytest
 
-from traction.agents.analyst import BedrockAnalystAgent
-from traction.schemas.analysis import AnalysisReport, ExperimentVerdict, Verdict
-from traction.schemas.experiment import Channel
+from augury.agents.analyst import BedrockAnalystAgent
+from augury.schemas.analysis import AnalysisReport, ExperimentVerdict, Verdict
+from augury.schemas.experiment import Channel
 
 from tests._analyst_fixtures import (
     sample_plan,

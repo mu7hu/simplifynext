@@ -6,8 +6,8 @@ import json
 
 import pytest
 
-from traction.schemas.founder import FounderBrief, GoalType
-from traction.services.intake import (
+from augury.schemas.founder import FounderBrief, GoalType
+from augury.services.intake import (
     FileIntakeProvider,
     DictIntakeProvider,
     MockIntakeProvider,

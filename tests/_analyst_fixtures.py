@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-from traction.schemas.experiment import Channel, Allocation, ExperimentPlan
-from traction.schemas.result import ExperimentResult
-from traction.schemas.profile import BenchmarkPrior
+from augury.schemas.experiment import Channel, Allocation, ExperimentPlan
+from augury.schemas.result import ExperimentResult
+from augury.schemas.profile import BenchmarkPrior
 
 
 def sample_priors() -> list[BenchmarkPrior]:

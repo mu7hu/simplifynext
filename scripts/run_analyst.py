@@ -28,11 +28,11 @@ import sys
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "src")))
 
-from traction.api.analyst_lambda import analyze_payload  # noqa: E402
+from augury.api.analyst_lambda import analyze_payload  # noqa: E402
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Run the Traction Analyst Agent on a JSON payload.")
+    parser = argparse.ArgumentParser(description="Run the Augury Analyst Agent on a JSON payload.")
     parser.add_argument("payload", help="Path to a JSON file with cycle_id / plan / results / benchmark_priors")
     parser.add_argument("--pretty", action="store_true", help="Indent the JSON output")
     args = parser.parse_args()

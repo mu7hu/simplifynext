@@ -8,7 +8,7 @@ from rich.table import Table
 
 sys.path.insert(0, os.path.abspath("src"))
 
-from traction.evaluation.harness import EvaluationHarness
+from augury.evaluation.harness import EvaluationHarness
 
 
 def main():

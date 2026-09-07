@@ -1,10 +1,10 @@
 """Unit tests for Analyst Agent verdicts and safeguards."""
 
-from traction.agents.analyst import StubAnalystAgent
-from traction.services.profiler import MockProfilerService
-from traction.schemas.experiment import Channel, Allocation, ExperimentPlan
-from traction.schemas.result import ExperimentResult
-from traction.schemas.analysis import Verdict
+from augury.agents.analyst import StubAnalystAgent
+from augury.services.profiler import MockProfilerService
+from augury.schemas.experiment import Channel, Allocation, ExperimentPlan
+from augury.schemas.result import ExperimentResult
+from augury.schemas.analysis import Verdict
 
 
 def test_analyst_first_class_insufficient_data():

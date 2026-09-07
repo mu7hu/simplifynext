@@ -3,13 +3,13 @@ requires = ["setuptools>=61.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "traction"
+name = "augury"
 version = "0.1.0"
 description = "Autonomous cross-channel marketing experimentation and budget allocation agent"
 readme = "README.md"
 requires-python = ">=3.11"
 authors = [
-    { name = "SimplifyNext Hackathon Team", email = "team@traction.ai" }
+    { name = "SimplifyNext Hackathon Team", email = "team@augury.ai" }
 ]
 dependencies = [
     "pydantic>=2.7.0",

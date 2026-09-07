@@ -67,8 +67,8 @@
     "loop_discipline_rate": 1.0,
     "answer_fidelity_score": 0.95
   },
-  "Traction (Agentic)": {
-    "strategy_name": "Traction (Agentic)",
+  "Augury (Agentic)": {
+    "strategy_name": "Augury (Agentic)",
     "total_spend": 60000.0,
     "total_outcomes": 320,
     "blended_cac": 187.5,

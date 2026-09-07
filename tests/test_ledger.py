@@ -1,10 +1,10 @@
 """Unit tests for SQLite Experiment Ledger persistence."""
 
 import os
-from traction.ledger.sqlite import SQLiteExperimentLedger
-from traction.schemas.experiment import Channel, Allocation, ExperimentPlan
-from traction.schemas.result import ExperimentResult
-from traction.schemas.analysis import AnalysisReport, ExperimentVerdict, Verdict
+from augury.ledger.sqlite import SQLiteExperimentLedger
+from augury.schemas.experiment import Channel, Allocation, ExperimentPlan
+from augury.schemas.result import ExperimentResult
+from augury.schemas.analysis import AnalysisReport, ExperimentVerdict, Verdict
 
 
 def test_ledger_cycle_persistence(tmp_path):

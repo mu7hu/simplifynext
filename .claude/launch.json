@@ -2,7 +2,7 @@
   "version": "0.0.1",
   "configurations": [
     {
-      "name": "traction-static",
+      "name": "augury-static",
       "url": "http://localhost:8765"
     }
   ]

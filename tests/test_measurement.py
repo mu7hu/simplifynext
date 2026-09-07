@@ -2,10 +2,10 @@
 
 from __future__ import annotations
 
-from traction.schemas.experiment import Channel, Allocation, ExperimentPlan
-from traction.schemas.result import RawExecutionResult, ExperimentResult
-from traction.schemas.profile import BenchmarkPrior
-from traction.services.measurement import DefaultMeasurementService
+from augury.schemas.experiment import Channel, Allocation, ExperimentPlan
+from augury.schemas.result import RawExecutionResult, ExperimentResult
+from augury.schemas.profile import BenchmarkPrior
+from augury.services.measurement import DefaultMeasurementService
 
 
 def _alloc(channel, exp_id, audience, threshold, window, exploration=False):

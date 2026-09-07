@@ -1,4 +1,4 @@
-# Traction — branch integration guide
+# Augury — branch integration guide
 
 This is the handoff for the teammate-owned branch. The objective is to merge both branches into one complete, bounded, offline-runnable system.
 
@@ -54,9 +54,9 @@ The current teammate-owned stubs are `StubAnalystAgent`, `DefaultMeasurementServ
 
 The three contracts must not be changed casually:
 
-1. `ExperimentPlan` — `src/traction/schemas/experiment.py` — Strategist output consumed by execution and analysis.
-2. `ExperimentResult` — `src/traction/schemas/result.py` — normalized measurement output consumed by Analyst and Ledger.
-3. `AnalysisReport` — `src/traction/schemas/analysis.py` — Analyst output consumed by validation, Ledger, Digest, and the next planning cycle.
+1. `ExperimentPlan` — `src/augury/schemas/experiment.py` — Strategist output consumed by execution and analysis.
+2. `ExperimentResult` — `src/augury/schemas/result.py` — normalized measurement output consumed by Analyst and Ledger.
+3. `AnalysisReport` — `src/augury/schemas/analysis.py` — Analyst output consumed by validation, Ledger, Digest, and the next planning cycle.
 
 Supported verdicts are exactly `SCALE`, `HOLD`, `CUT`, and `INSUFFICIENT_DATA`.
 
@@ -64,7 +64,7 @@ Supported verdicts are exactly `SCALE`, `HOLD`, `CUT`, and `INSUFFICIENT_DATA`.
 
 ### Analyst
 
-File: `src/traction/agents/analyst.py`
+File: `src/augury/agents/analyst.py`
 
 ```python
 analyze_cycle(
@@ -79,7 +79,7 @@ Compare results with targets and priors, preserve `INSUFFICIENT_DATA` for incomp
 
 ### Measurement
 
-File: `src/traction/services/measurement.py`
+File: `src/augury/services/measurement.py`
 
 ```python
 normalize_results(
@@ -93,7 +93,7 @@ Normalize cross-channel telemetry into comparable spend, outcomes, CAC, conversi
 
 ### Intake and Profiler
 
-Files: `src/traction/services/intake.py` and `src/traction/services/profiler.py`
+Files: `src/augury/services/intake.py` and `src/augury/services/profiler.py`
 
 ```python
 get_founder_brief(startup_id: str) -> FounderBrief
@@ -105,7 +105,7 @@ Return validated schemas. Founder preferences are soft priors; hard exclusions a
 
 ### Execution
 
-File: `src/traction/services/execution.py`
+File: `src/augury/services/execution.py`
 
 ```python
 execute_plan(plan: ExperimentPlan) -> list[RawExecutionResult]
@@ -115,7 +115,7 @@ Execution is called only after approval. Real adapters may replace the simulator
 
 ### Digest and Frontend
 
-File: `src/traction/services/digest.py`
+File: `src/augury/services/digest.py`
 
 ```python
 generate_digest(
